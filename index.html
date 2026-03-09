@@ -1,60 +1,369 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SENAIFUT 3D - MULTIPLAYER</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #0f172a; font-family: 'Segoe UI', Tahoma, sans-serif; user-select: none; color: white; }
+        :root {
+            --green: #10b981;
+            --blue: #3b82f6;
+            --bg: #0f172a;
+            --panel: rgba(0, 0, 0, 0.6);
+            --text-soft: #cbd5e1;
+            --border: rgba(255,255,255,0.1);
+            --gold: #facc15;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: var(--bg);
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            user-select: none;
+            color: white;
+        }
+
         canvas { display: block; }
-        
-        /* TELAS DO SISTEMA */
-        #mainMenuUI, #waitingRoomUI, #gameUI { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 10; }
+
+        #mainMenuUI, #waitingRoomUI, #gameUI {
+            position: absolute;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 10;
+        }
+
         #waitingRoomUI, #gameUI { display: none; }
-        
-        /* OVERLAY DE PAUSE / TRAVAR MOUSE */
-        #lockOverlay { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.7); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 20; cursor: pointer; }
-        #lockOverlay h2 { color: #10b981; font-size: 40px; text-transform: uppercase; text-shadow: 0 0 20px #10b981; margin: 0; }
-        #lockOverlay p { color: white; font-size: 18px; margin-top: 10px; }
-        
-        /* MENUS */
-        .menu-container { background: radial-gradient(circle at top, #1e293b 0%, #0f172a 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .panel { background: rgba(0, 0, 0, 0.6); padding: 40px; border-radius: 16px; text-align: center; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 50px rgba(0,0,0,0.5); width: 400px; }
-        h1 { color: #10b981; font-size: 3em; font-style: italic; text-transform: uppercase; letter-spacing: 2px; text-shadow: 0 0 20px rgba(16, 185, 129, 0.4); margin-bottom: 30px; }
-        input, select { width: 90%; padding: 14px; margin: 10px 0; border-radius: 8px; border: 1px solid #334155; font-size: 16px; background: #1e293b; color: white; outline: none; }
-        button { width: 96%; padding: 15px; margin: 10px 0; border-radius: 8px; border: none; font-size: 18px; font-weight: bold; cursor: pointer; transition: 0.2s; text-transform: uppercase; }
-        .btn-host { background: #10b981; color: white; box-shadow: 0 4px 0 #059669; }
-        .btn-host:active { transform: translateY(4px); box-shadow: none; }
-        .btn-join { background: #3b82f6; color: white; box-shadow: 0 4px 0 #2563eb; }
-        .btn-join:active { transform: translateY(4px); box-shadow: none; }
-        
-        /* SALA DE ESPERA */
-        #waitingRoomUI .panel { width: 500px; }
-        .room-code-box { background: rgba(16, 185, 129, 0.1); border: 2px dashed #10b981; padding: 20px; border-radius: 10px; margin-bottom: 20px; }
-        .room-code-box h2 { margin: 0; color: #10b981; font-size: 14px; }
-        #displayRoomCode { font-size: 40px; color: white; letter-spacing: 8px; margin: 10px 0; font-weight: bold; user-select: text; cursor: text; }
-        #playerList { list-style: none; padding: 0; margin: 20px 0; max-height: 200px; overflow-y: auto; text-align: left; background: rgba(0,0,0,0.3); border-radius: 8px; border: 1px solid #334155; }
-        #playerList li { padding: 12px 20px; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; }
+
+        #lockOverlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.72);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+            cursor: pointer;
+        }
+
+        #lockOverlay h2 {
+            color: var(--green);
+            font-size: 40px;
+            text-transform: uppercase;
+            text-shadow: 0 0 20px var(--green);
+            margin: 0;
+        }
+
+        #lockOverlay p {
+            color: white;
+            font-size: 18px;
+            margin-top: 10px;
+        }
+
+        .menu-container {
+            background: radial-gradient(circle at top, #1e293b 0%, #0f172a 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .panel {
+            background: var(--panel);
+            padding: 40px;
+            border-radius: 16px;
+            text-align: center;
+            border: 1px solid var(--border);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            width: min(92vw, 420px);
+        }
+
+        #waitingRoomUI .panel { width: min(92vw, 540px); }
+
+        h1 {
+            color: var(--green);
+            font-size: 3em;
+            font-style: italic;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
+            margin-bottom: 30px;
+        }
+
+        input, select {
+            width: 90%;
+            padding: 14px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border: 1px solid #334155;
+            font-size: 16px;
+            background: #1e293b;
+            color: white;
+            outline: none;
+        }
+
+        button {
+            width: 96%;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border: none;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.15s;
+            text-transform: uppercase;
+        }
+
+        .btn-host {
+            background: var(--green);
+            color: white;
+            box-shadow: 0 4px 0 #059669;
+        }
+
+        .btn-join {
+            background: var(--blue);
+            color: white;
+            box-shadow: 0 4px 0 #2563eb;
+        }
+
+        .btn-host:active, .btn-join:active {
+            transform: translateY(4px);
+            box-shadow: none;
+        }
+
+        .room-code-box {
+            background: rgba(16, 185, 129, 0.1);
+            border: 2px dashed var(--green);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .room-code-box h2 {
+            margin: 0;
+            color: var(--green);
+            font-size: 14px;
+        }
+
+        #displayRoomCode {
+            font-size: 40px;
+            color: white;
+            letter-spacing: 8px;
+            margin: 10px 0;
+            font-weight: bold;
+            user-select: text;
+        }
+
+        #playerList {
+            list-style: none;
+            padding: 0;
+            margin: 20px 0;
+            max-height: 220px;
+            overflow-y: auto;
+            text-align: left;
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            border: 1px solid #334155;
+        }
+
+        #playerList li {
+            padding: 12px 20px;
+            border-bottom: 1px solid #334155;
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            align-items: center;
+        }
+
         #playerList li:last-child { border-bottom: none; }
+
         .player-name { font-weight: bold; font-size: 16px; }
-        .player-char { font-size: 12px; color: #94a3b8; background: #1e293b; padding: 4px 8px; border-radius: 4px; }
-        
-        /* JOGO */
-        #crosshair { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: rgba(255, 255, 255, 0.5); font-size: 24px; pointer-events: none; }
-        #placar { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); font-size: 36px; font-weight: bold; background: rgba(0,0,0,0.8); padding: 10px 40px; border-radius: 12px; border: 2px solid #10b981; pointer-events: none; }
-        #staminaContainer { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); width: 300px; height: 16px; background: rgba(0,0,0,0.8); border: 2px solid white; border-radius: 8px; overflow: hidden; }
-        #staminaBar { width: 100%; height: 100%; background: #10b981; transition: width 0.1s; }
-        #instructions { position: absolute; top: 20px; left: 20px; background: rgba(0,0,0,0.7); padding: 15px; border-radius: 8px; pointer-events: none; font-size: 13px; border: 1px solid rgba(255,255,255,0.1); }
+        .player-char {
+            font-size: 12px;
+            color: #94a3b8;
+            background: #1e293b;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: rgba(255,255,255,0.55);
+            font-size: 24px;
+            pointer-events: none;
+            z-index: 15;
+        }
+
+        #placar {
+            position: absolute;
+            top: 18px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 34px;
+            font-weight: bold;
+            background: rgba(0,0,0,0.8);
+            padding: 10px 36px;
+            border-radius: 12px;
+            border: 2px solid var(--green);
+            pointer-events: none;
+            z-index: 15;
+        }
+
+        #staminaContainer {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: min(320px, 70vw);
+            height: 16px;
+            background: rgba(0,0,0,0.8);
+            border: 2px solid white;
+            border-radius: 8px;
+            overflow: hidden;
+            z-index: 15;
+        }
+
+        #staminaBar {
+            width: 100%;
+            height: 100%;
+            background: var(--green);
+            transition: width 0.08s linear;
+        }
+
+        #instructions {
+            position: absolute;
+            top: 18px;
+            left: 18px;
+            background: rgba(0,0,0,0.72);
+            padding: 14px;
+            border-radius: 8px;
+            pointer-events: none;
+            font-size: 13px;
+            border: 1px solid rgba(255,255,255,0.1);
+            line-height: 1.5;
+            z-index: 15;
+        }
+
+        #embaixadinhaUI, #shotPowerUI {
+            position: absolute;
+            right: 18px;
+            width: min(360px, 34vw);
+            min-width: 260px;
+            background: rgba(0,0,0,0.78);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 12px;
+            padding: 14px;
+            z-index: 18;
+            display: none;
+        }
+
+        #embaixadinhaUI { top: 18px; }
+        #shotPowerUI { top: 190px; }
+
+        #embaixadinhaTitle, #shotPowerTitle {
+            font-weight: 800;
+            color: #fde68a;
+            font-size: 15px;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        #embaixadinhaText, #shotPowerText {
+            font-size: 14px;
+            color: var(--text-soft);
+            margin-bottom: 10px;
+        }
+
+        #embaixadinhaBar, #shotPowerBar {
+            position: relative;
+            width: 100%;
+            height: 22px;
+            background: #1e293b;
+            border-radius: 999px;
+            overflow: hidden;
+            border: 2px solid #334155;
+        }
+
+        #embaixadinhaZone, #shotPowerPerfect {
+            position: absolute;
+            top: 0;
+            height: 100%;
+            border-radius: 999px;
+        }
+
+        #embaixadinhaZone {
+            background: linear-gradient(90deg, #22c55e, #84cc16);
+        }
+
+        #shotPowerPerfect {
+            background: linear-gradient(90deg, #f59e0b, #facc15);
+        }
+
+        #embaixadinhaMarker, #shotPowerMarker {
+            position: absolute;
+            top: -3px;
+            width: 6px;
+            height: 28px;
+            background: white;
+            box-shadow: 0 0 10px rgba(255,255,255,0.85);
+            border-radius: 999px;
+        }
+
+        #embaixadinhaCounter, #shotPowerValue {
+            margin-top: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            color: white;
+        }
+
+        #embaixadinhaSmall, #shotPowerSmall {
+            margin-top: 6px;
+            color: #94a3b8;
+            font-size: 12px;
+        }
+
+        #globalEventText {
+            position: absolute;
+            top: 84px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.76);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 10px;
+            padding: 10px 16px;
+            z-index: 16;
+            font-weight: 700;
+            display: none;
+        }
+
+        #netStats {
+            position: absolute;
+            bottom: 56px;
+            right: 16px;
+            z-index: 15;
+            font-size: 12px;
+            color: #93c5fd;
+            background: rgba(0,0,0,0.55);
+            padding: 6px 10px;
+            border-radius: 8px;
+            pointer-events: none;
+        }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 </head>
 <body oncontextmenu="return false;">
-
     <div id="mainMenuUI" class="menu-container">
         <div class="panel">
             <h1>SENAIFUT</h1>
-            <input type="text" id="playerName" placeholder="Seu Nome" maxlength="12">
+            <input type="text" id="playerName" placeholder="Seu Nome" maxlength="12" />
             <select id="playerChar">
                 <option value="brisa.png">Brisa</option>
                 <option value="edson.png">Edson</option>
@@ -71,9 +380,9 @@
 
             <button class="btn-host" id="btnCreate">Criar Sala (Host)</button>
             <div style="margin: 15px 0; color: #64748b; font-size: 14px;">OU</div>
-            <input type="text" id="joinCode" placeholder="Código (6 dígitos)" maxlength="6" style="text-align: center; font-size: 20px; letter-spacing: 4px;">
+            <input type="text" id="joinCode" placeholder="Código (6 dígitos)" maxlength="6" style="text-align:center; font-size:20px; letter-spacing:4px;" />
             <button class="btn-join" id="btnJoin">Entrar na Sala</button>
-            <div id="statusText" style="margin-top: 15px; color: #cbd5e1; font-size: 14px;"></div>
+            <div id="statusText" style="margin-top:15px; color:#cbd5e1; font-size:14px;"></div>
         </div>
     </div>
 
@@ -82,14 +391,14 @@
             <div class="room-code-box">
                 <h2>CÓDIGO DA SALA:</h2>
                 <div id="displayRoomCode">------</div>
-                <div style="font-size: 12px; color: #cbd5e1;">Passe este código para os seus amigos entrarem.</div>
+                <div style="font-size:12px; color:#cbd5e1;">Passe este código para os seus amigos entrarem.</div>
             </div>
-            
-            <h3 style="margin: 0; text-align: left; color: #cbd5e1; font-size: 14px;">JOGADORES NA SALA:</h3>
+
+            <h3 style="margin:0; text-align:left; color:#cbd5e1; font-size:14px;">JOGADORES NA SALA:</h3>
             <ul id="playerList"></ul>
 
-            <button class="btn-host" id="btnStartGame" style="display: none;">Começar Partida</button>
-            <div id="waitingText" style="display: none; color: #cbd5e1;">Aguardando o Host iniciar a partida...</div>
+            <button class="btn-host" id="btnStartGame" style="display:none;">Começar Partida</button>
+            <div id="waitingText" style="display:none; color:#cbd5e1;">Aguardando o Host iniciar a partida...</div>
         </div>
     </div>
 
@@ -101,294 +410,1324 @@
 
         <div id="crosshair">✛</div>
         <div id="placar"><span id="score1">0</span> - <span id="score2">0</span></div>
+        <div id="globalEventText"></div>
+
         <div id="instructions">
             <b>CONTROLES</b><br><br>
             <b>W,A,S,D</b>: Andar / Conduzir<br>
             <b>SHIFT</b>: Correr<br>
-            <b>ESPAÇO</b>: Dar Bote (Roubar)<br>
-            <b>Clique Esq.</b>: Chutar<br>
-            <b>Clique Dir.</b>: Parar a Bola
+            <b>Cliq. Esq.</b>: Chute forte direto<br>
+            <b>ESPAÇO</b>: Minigame de força do chute<br>
+            <b>Cliq. Dir.</b>: Matar a bola<br>
+            <b>E</b>: Embaixadinha
         </div>
+
+        <div id="embaixadinhaUI">
+            <div id="embaixadinhaTitle">EMBAIXADINHA</div>
+            <div id="embaixadinhaText">Aperte <b>E</b> quando a barra branca estiver na zona verde.</div>
+            <div id="embaixadinhaBar">
+                <div id="embaixadinhaZone"></div>
+                <div id="embaixadinhaMarker"></div>
+            </div>
+            <div id="embaixadinhaCounter">Contador: 0</div>
+            <div id="embaixadinhaSmall">Todos veem sua sequência em tempo real.</div>
+        </div>
+
+        <div id="shotPowerUI">
+            <div id="shotPowerTitle">CHUTE TÉCNICO</div>
+            <div id="shotPowerText">Aperte <b>ESPAÇO</b> de novo para travar a força.</div>
+            <div id="shotPowerBar">
+                <div id="shotPowerPerfect"></div>
+                <div id="shotPowerMarker"></div>
+            </div>
+            <div id="shotPowerValue">Força: 0%</div>
+            <div id="shotPowerSmall">Quanto mais perto da zona amarela, mais forte o chute.</div>
+        </div>
+
         <div id="staminaContainer"><div id="staminaBar"></div></div>
+        <div id="netStats">NET: --</div>
     </div>
 
     <script>
-        window.addEventListener('contextmenu', e => e.preventDefault());
+        window.addEventListener('contextmenu', (e) => e.preventDefault());
 
-        let peer;
-        let connections = {}; 
+        const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+        const now = () => performance.now();
+
+        function generateCode() {
+            return Math.floor(100000 + Math.random() * 900000).toString();
+        }
+
+        let peer = null;
+        let connections = {};
         let isHost = false;
-        let hostConnection = null; 
-        
+        let hostConnection = null;
+        let hasGameStarted = false;
+
         let myInfo = { id: '', name: '', char: '' };
-        let roomPlayers = []; 
-        
+        let roomPlayers = [];
+
         const uiMenu = document.getElementById('mainMenuUI');
         const uiWaiting = document.getElementById('waitingRoomUI');
         const uiGame = document.getElementById('gameUI');
         const statusTxt = document.getElementById('statusText');
         const lockOverlay = document.getElementById('lockOverlay');
-
-        function generateCode() { return Math.floor(100000 + Math.random() * 900000).toString(); }
+        const netStats = document.getElementById('netStats');
 
         function updatePlayerListUI() {
             const list = document.getElementById('playerList');
             list.innerHTML = '';
-            roomPlayers.forEach(p => {
+
+            roomPlayers.forEach((p) => {
                 const li = document.createElement('li');
-                li.innerHTML = `<span class="player-name">${p.name} ${p.id === myInfo.id ? '(Você)' : ''} ${p.isHost ? '👑' : ''}</span> 
-                                <span class="player-char">${p.char.replace('.png', '')}</span>`;
+                li.innerHTML = `
+                    <span class="player-name">
+                        ${p.name} ${p.id === myInfo.id ? '(Você)' : ''} ${p.isHost ? '👑' : ''}
+                    </span>
+                    <span class="player-char">${p.char.replace('.png', '')}</span>
+                `;
                 list.appendChild(li);
             });
         }
 
+        function broadcast(data) {
+            for (const id in connections) {
+                const conn = connections[id];
+                if (conn && conn.open) conn.send(data);
+            }
+        }
+
+        function showStatus(text) {
+            statusTxt.innerText = text;
+        }
+
         document.getElementById('btnCreate').onclick = () => {
-            myInfo.name = document.getElementById('playerName').value || "Host";
+            if (peer) return;
+
+            myInfo.name = (document.getElementById('playerName').value || 'Host').trim().slice(0, 12);
             myInfo.char = document.getElementById('playerChar').value;
+
             const code = generateCode();
-            statusTxt.innerText = "Criando sala...";
+            showStatus('Criando sala...');
+
             peer = new Peer(code);
+
             peer.on('open', (id) => {
-                isHost = true; myInfo.id = id;
-                roomPlayers.push({ ...myInfo, isHost: true });
+                isHost = true;
+                myInfo.id = id;
+                roomPlayers = [{ ...myInfo, isHost: true }];
+
                 uiMenu.style.display = 'none';
                 uiWaiting.style.display = 'flex';
                 document.getElementById('displayRoomCode').innerText = id;
                 document.getElementById('btnStartGame').style.display = 'block';
+
                 updatePlayerListUI();
+                showStatus('');
             });
+
             peer.on('connection', (conn) => {
                 connections[conn.peer] = conn;
+
+                conn.on('open', () => {
+                    conn.send({ type: 'ping', t: Date.now() });
+                });
+
                 conn.on('data', (data) => handleNetworkData(conn.peer, data));
+
+                conn.on('close', () => {
+                    delete connections[conn.peer];
+                    roomPlayers = roomPlayers.filter(p => p.id !== conn.peer);
+
+                    if (networkMeshes[conn.peer]) {
+                        scene.remove(networkMeshes[conn.peer].mesh);
+                        delete networkMeshes[conn.peer];
+                    }
+
+                    if (juggle.active && juggle.playerId === conn.peer) endJuggle('disconnect');
+                    if (shotMini.active && shotMini.playerId === conn.peer) cancelShotMiniHost();
+
+                    updatePlayerListUI();
+                    if (!hasGameStarted) broadcast({ type: 'lobbySync', players: roomPlayers });
+                });
+
+                conn.on('error', () => {});
+            });
+
+            peer.on('error', (err) => {
+                alert('Erro ao criar sala: ' + err.type);
+                location.reload();
             });
         };
 
         document.getElementById('btnJoin').onclick = () => {
-            myInfo.name = document.getElementById('playerName').value || "Visitante";
+            if (peer) return;
+
+            myInfo.name = (document.getElementById('playerName').value || 'Visitante').trim().slice(0, 12);
             myInfo.char = document.getElementById('playerChar').value;
-            const code = document.getElementById('joinCode').value;
-            if(code.length !== 6) return alert("Digite os 6 dígitos!");
-            statusTxt.innerText = "Entrando na sala...";
-            peer = new Peer(); 
+
+            const code = document.getElementById('joinCode').value.trim();
+            if (code.length !== 6) {
+                alert('Digite os 6 dígitos!');
+                return;
+            }
+
+            showStatus('Entrando na sala...');
+            peer = new Peer();
+
             peer.on('open', (id) => {
                 myInfo.id = id;
-                hostConnection = peer.connect(code);
+                hostConnection = peer.connect(code, { reliable: false });
+
                 hostConnection.on('open', () => {
                     isHost = false;
                     hostConnection.send({ type: 'joinReq', player: myInfo });
                     uiMenu.style.display = 'none';
                     uiWaiting.style.display = 'flex';
                     document.getElementById('displayRoomCode').innerText = code;
-                    document.getElementById('waitingText').style.display = 'block'; 
+                    document.getElementById('waitingText').style.display = 'block';
                 });
+
                 hostConnection.on('data', (data) => handleNetworkData('host', data));
-                hostConnection.on('error', () => { alert("Sala não encontrada!"); location.reload(); });
+
+                hostConnection.on('close', () => {
+                    alert('Conexão com o host foi perdida.');
+                    location.reload();
+                });
+
+                hostConnection.on('error', () => {
+                    alert('Sala não encontrada!');
+                    location.reload();
+                });
+            });
+
+            peer.on('error', () => {
+                alert('Falha de conexão.');
+                location.reload();
             });
         };
 
-        function handleNetworkData(senderId, data) {
-            if (isHost) {
-                if (data.type === 'joinReq') {
-                    roomPlayers.push({ ...data.player, isHost: false });
-                    updatePlayerListUI();
-                    broadcast({ type: 'lobbySync', players: roomPlayers });
-                } else if (data.type === 'updatePos') {
-                    if(networkMeshes[senderId]) {
-                        networkMeshes[senderId].mesh.position.set(data.x, data.y, data.z);
-                        networkMeshes[senderId].mesh.rotation.y = data.rotY;
-                    }
-                } else if (data.type === 'kick') { ballVelocity.copy(new THREE.Vector3(data.dirX, data.dirY, data.dirZ)).multiplyScalar(1.6); }
-                else if (data.type === 'stopBall') { ballVelocity.set(0,0,0); }
-                else if (data.type === 'steal') { tryStealHost(new THREE.Vector3(data.x, data.y, data.z), new THREE.Vector3(data.dirX, 0, data.dirZ)); }
-            } else {
-                if (data.type === 'lobbySync') { roomPlayers = data.players; updatePlayerListUI(); }
-                else if (data.type === 'startGameCmd') { buildGameScene(); }
-                else if (data.type === 'gameState') {
-                    ball.position.set(data.ball.x, data.ball.y, data.ball.z);
-                    document.getElementById('score1').innerText = data.score1;
-                    document.getElementById('score2').innerText = data.score2;
-                    for (let id in data.positions) {
-                        if (id === myInfo.id) continue;
-                        let posData = data.positions[id];
-                        if (networkMeshes[id]) {
-                            networkMeshes[id].mesh.position.lerp(new THREE.Vector3(posData.x, posData.y, posData.z), 0.3);
-                            networkMeshes[id].mesh.rotation.y = posData.rotY;
-                        }
-                    }
-                }
-            }
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0f172a);
+        scene.fog = new THREE.Fog(0x0f172a, 70, 180);
+
+        const camera = new THREE.PerspectiveCamera(80, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+        const renderer = new THREE.WebGLRenderer({
+            antialias: true,
+            alpha: false,
+            powerPreference: 'high-performance'
+        });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
+        renderer.setSize(window.innerWidth, window.innerHeight);
+
+        const ambient = new THREE.AmbientLight(0xffffff, 0.72);
+        scene.add(ambient);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.7);
+        dirLight.position.set(30, 60, 20);
+        scene.add(dirLight);
+
+        const textureLoader = new THREE.TextureLoader();
+
+        const fieldWidth = 60;
+        const fieldLength = 100;
+        const ballRadius = 0.6;
+        const DIRECT_KICK_POWER = 4.2;
+        const TOUCH_PUSH_FORCE = 2.3;
+
+        const worldGroup = new THREE.Group();
+        scene.add(worldGroup);
+
+        const field = new THREE.Mesh(
+            new THREE.PlaneGeometry(fieldWidth, fieldLength),
+            new THREE.MeshLambertMaterial({ color: 0x10b981 })
+        );
+        field.rotation.x = -Math.PI / 2;
+        worldGroup.add(field);
+
+        const outlineMat = new THREE.LineBasicMaterial({ color: 0xffffff });
+
+        function makeRectLine(width, height) {
+            const hw = width / 2;
+            const hh = height / 2;
+            const pts = [
+                new THREE.Vector3(-hw, 0.05, -hh),
+                new THREE.Vector3(hw, 0.05, -hh),
+                new THREE.Vector3(hw, 0.05, hh),
+                new THREE.Vector3(-hw, 0.05, hh),
+                new THREE.Vector3(-hw, 0.05, -hh)
+            ];
+            const geo = new THREE.BufferGeometry().setFromPoints(pts);
+            return new THREE.Line(geo, outlineMat);
         }
 
-        function broadcast(data) { for (let id in connections) connections[id].send(data); }
+        worldGroup.add(makeRectLine(fieldWidth, fieldLength));
 
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x0f172a); 
-        const camera = new THREE.PerspectiveCamera(80, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        
-        scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-        const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
-        dirLight.position.set(20, 100, 20); scene.add(dirLight);
+        const midLineGeo = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(-fieldWidth / 2, 0.05, 0),
+            new THREE.Vector3(fieldWidth / 2, 0.05, 0)
+        ]);
+        worldGroup.add(new THREE.Line(midLineGeo, outlineMat));
 
-        const fieldWidth = 60, fieldLength = 100;
-        const field = new THREE.Mesh(new THREE.PlaneGeometry(fieldWidth, fieldLength), new THREE.MeshLambertMaterial({ color: 0x10b981 }));
-        field.rotation.x = -Math.PI / 2; scene.add(field);
-        
-        const lines = new THREE.Mesh(new THREE.PlaneGeometry(fieldWidth, fieldLength), new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true }));
-        lines.rotation.x = -Math.PI / 2; lines.position.y = 0.05; scene.add(lines);
+        const circle = new THREE.Mesh(
+            new THREE.RingGeometry(8.8, 9, 48),
+            new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide })
+        );
+        circle.rotation.x = -Math.PI / 2;
+        circle.position.y = 0.05;
+        worldGroup.add(circle);
 
-        const goalMat = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true });
-        const goal1 = new THREE.Mesh(new THREE.BoxGeometry(14, 4, 4), goalMat);
-        goal1.position.set(0, 2, -fieldLength/2); scene.add(goal1);
-        const goal2 = new THREE.Mesh(new THREE.BoxGeometry(14, 4, 4), goalMat);
-        goal2.position.set(0, 2, fieldLength/2); scene.add(goal2);
+        function createGoal(zPos) {
+            const goalMat = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true });
+            const goal = new THREE.Mesh(new THREE.BoxGeometry(14, 4, 4), goalMat);
+            goal.position.set(0, 2, zPos);
+            worldGroup.add(goal);
+        }
 
-        const ballRadius = 0.6;
-        const ball = new THREE.Mesh(new THREE.SphereGeometry(ballRadius, 16, 16), new THREE.MeshPhongMaterial({ color: 0xffffff }));
+        createGoal(-fieldLength / 2);
+        createGoal(fieldLength / 2);
+
+        const ball = new THREE.Mesh(
+            new THREE.SphereGeometry(ballRadius, 18, 18),
+            new THREE.MeshPhongMaterial({ color: 0xffffff, shininess: 42 })
+        );
         scene.add(ball);
 
         let ballVelocity = new THREE.Vector3(0, 0, 0);
-        let placar1 = 0; let placar2 = 0;
-        let networkMeshes = {}; 
-        const textureLoader = new THREE.TextureLoader();
+
+        function createPlayerMesh(playerInfo) {
+            const geo = new THREE.BoxGeometry(1.5, 3, 1.5);
+            const mat = new THREE.MeshLambertMaterial({ color: 0x9ca3af });
+            const mesh = new THREE.Mesh(geo, mat);
+
+            mesh.position.set(0, -100, 0);
+            mesh.userData.playerId = playerInfo.id;
+            mesh.userData.playerName = playerInfo.name;
+
+            textureLoader.load(
+                playerInfo.char,
+                (tex) => {
+                    tex.minFilter = THREE.LinearFilter;
+                    tex.magFilter = THREE.LinearFilter;
+                    mesh.material = new THREE.MeshLambertMaterial({ map: tex });
+                },
+                undefined,
+                () => {}
+            );
+
+            scene.add(mesh);
+
+            return {
+                mesh,
+                info: playerInfo,
+                targetPos: new THREE.Vector3(0, -100, 0),
+                targetRotY: 0
+            };
+        }
+
+        let placar1 = 0;
+        let placar2 = 0;
+        let networkMeshes = {};
+
+        let gameStateInterval = null;
+        let sendPosInterval = null;
+        let lastBroadcastAt = 0;
+
+        const keys = {
+            w: false,
+            a: false,
+            s: false,
+            d: false,
+            shift: false,
+            space: false,
+            e: false
+        };
+
+        let stamina = 100;
+        let pitch = 0;
+        let yaw = 0;
+        let lastMoveSent = { x: 0, y: 0, z: 0, rotY: 0 };
+        let pingMs = 0;
+
+        const globalEventText = document.getElementById('globalEventText');
+
+        const emUI = document.getElementById('embaixadinhaUI');
+        const emZone = document.getElementById('embaixadinhaZone');
+        const emMarker = document.getElementById('embaixadinhaMarker');
+        const emCounter = document.getElementById('embaixadinhaCounter');
+        const emText = document.getElementById('embaixadinhaText');
+
+        const shotPowerUI = document.getElementById('shotPowerUI');
+        const shotPowerPerfect = document.getElementById('shotPowerPerfect');
+        const shotPowerMarker = document.getElementById('shotPowerMarker');
+        const shotPowerValue = document.getElementById('shotPowerValue');
+        const shotPowerText = document.getElementById('shotPowerText');
+
+        const juggle = {
+            active: false,
+            playerId: null,
+            playerName: '',
+            count: 0,
+            meter: 0.5,
+            meterDir: 1,
+            zoneStart: 0.36,
+            zoneSize: 0.28,
+            speed: 0.9,
+            failGrace: 1.25,
+            timeout: 0,
+            baseHeight: 2.15,
+            bounceAmplitude: 0.95,
+            bounceTime: 0
+        };
+
+        const shotMini = {
+            active: false,
+            playerId: null,
+            playerName: '',
+            meter: 0.0,
+            dir: 1,
+            speed: 2.2,
+            perfectStart: 0.78,
+            perfectSize: 0.16,
+            timeout: 1.6
+        };
+
+        function showGlobalEvent(msg, ms = 1600) {
+            globalEventText.textContent = msg;
+            globalEventText.style.display = 'block';
+            clearTimeout(showGlobalEvent._timer);
+            showGlobalEvent._timer = setTimeout(() => {
+                globalEventText.style.display = 'none';
+            }, ms);
+        }
+
+        function getKickDirection() {
+            const dir = new THREE.Vector3();
+            camera.getWorldDirection(dir);
+            dir.y = 0.30;
+            return dir.normalize();
+        }
+
+        function updateShotMiniUI() {
+            if (!shotMini.active) {
+                shotPowerUI.style.display = 'none';
+                return;
+            }
+
+            shotPowerUI.style.display = 'block';
+
+            const meterPct = shotMini.meter * 100;
+            const zonePct = shotMini.perfectStart * 100;
+            const zoneW = shotMini.perfectSize * 100;
+
+            shotPowerPerfect.style.left = `${zonePct}%`;
+            shotPowerPerfect.style.width = `${zoneW}%`;
+            shotPowerMarker.style.left = `calc(${meterPct}% - 3px)`;
+            shotPowerValue.textContent = `Força: ${Math.round(shotMini.meter * 100)}%`;
+
+            if (shotMini.playerId === myInfo.id) {
+                shotPowerText.innerHTML = `Aperte <b>ESPAÇO</b> de novo para travar a força.`;
+            } else {
+                shotPowerText.innerHTML = `<b>${shotMini.playerName}</b> está preparando um chute.`;
+            }
+        }
+
+        function handleShotMiniClient(data) {
+            shotMini.active = data.active;
+            shotMini.playerId = data.playerId;
+            shotMini.playerName = data.playerName || '';
+            shotMini.meter = data.meter ?? 0;
+            updateShotMiniUI();
+        }
+
+        function broadcastShotMiniState() {
+            if (!isHost) return;
+
+            const payload = {
+                type: 'shotMiniState',
+                shotMini: {
+                    active: shotMini.active,
+                    playerId: shotMini.playerId,
+                    playerName: shotMini.playerName,
+                    meter: shotMini.meter
+                }
+            };
+
+            handleShotMiniClient(payload.shotMini);
+            broadcast(payload);
+        }
+
+        function cancelShotMiniHost() {
+            if (!shotMini.active) return;
+            shotMini.active = false;
+            shotMini.playerId = null;
+            shotMini.playerName = '';
+            shotMini.meter = 0;
+            shotMini.timeout = 1.6;
+            broadcastShotMiniState();
+        }
+
+        function startShotMiniHost(playerId) {
+            if (shotMini.active || juggle.active) return false;
+
+            const p = getPlayerPositionById(playerId);
+            if (!p) return false;
+            if (p.distanceTo(ball.position) > 6.0) return false;
+
+            shotMini.active = true;
+            shotMini.playerId = playerId;
+            shotMini.playerName = getPlayerNameById(playerId);
+            shotMini.meter = 0.04;
+            shotMini.dir = 1;
+            shotMini.speed = 2.6;
+            shotMini.timeout = 1.6;
+
+            broadcastShotMiniState();
+            return true;
+        }
+
+        function finishShotMiniHost(playerId) {
+            if (!shotMini.active || shotMini.playerId !== playerId) return;
+
+            const p = getPlayerPositionById(playerId);
+            if (!p) {
+                cancelShotMiniHost();
+                return;
+            }
+
+            const dir = (playerId === myInfo.id)
+                ? getKickDirection()
+                : getRemotePlayerDirection(playerId);
+
+            const powerFactor = 1.6 + shotMini.meter * 4.8;
+            const perfectStart = shotMini.perfectStart;
+            const perfectEnd = shotMini.perfectStart + shotMini.perfectSize;
+            const isPerfect = shotMini.meter >= perfectStart && shotMini.meter <= perfectEnd;
+
+            if (isPerfect) {
+                dir.y += 0.08;
+                dir.normalize();
+            }
+
+            ballVelocity.copy(dir).multiplyScalar(powerFactor);
+            if (isPerfect) {
+                showGlobalEvent(`${shotMini.playerName} acertou um chute perfeito!`, 1200);
+            }
+
+            cancelShotMiniHost();
+        }
+
+        function updateShotMiniHost(dt) {
+            if (!shotMini.active) return;
+
+            shotMini.meter += shotMini.dir * shotMini.speed * dt;
+            shotMini.timeout -= dt;
+
+            if (shotMini.meter >= 1) {
+                shotMini.meter = 1;
+                shotMini.dir = -1;
+            } else if (shotMini.meter <= 0) {
+                shotMini.meter = 0;
+                shotMini.dir = 1;
+            }
+
+            if (shotMini.timeout <= 0) {
+                finishShotMiniHost(shotMini.playerId);
+                return;
+            }
+
+            const currentTime = performance.now();
+            if (currentTime - lastBroadcastAt > 50) {
+                broadcastShotMiniState();
+                lastBroadcastAt = currentTime;
+            }
+        }
+
+        function syncEmbaixadinhaUI() {
+            if (!juggle.active) {
+                emUI.style.display = 'none';
+                return;
+            }
+
+            const isMyJuggle = juggle.playerId === myInfo.id;
+            emUI.style.display = 'block';
+
+            const meterPct = juggle.meter * 100;
+            const zonePct = juggle.zoneStart * 100;
+            const zoneW = juggle.zoneSize * 100;
+
+            emZone.style.left = `${zonePct}%`;
+            emZone.style.width = `${zoneW}%`;
+            emMarker.style.left = `calc(${meterPct}% - 3px)`;
+            emCounter.textContent = `Contador: ${juggle.count}`;
+
+            if (isMyJuggle) {
+                emText.innerHTML = `Aperte <b>E</b> quando a barra branca estiver na zona verde.`;
+            } else {
+                emText.innerHTML = `<b>${juggle.playerName}</b> está fazendo embaixadinha.`;
+            }
+        }
+
+        function getPlayerNameById(id) {
+            if (id === myInfo.id) return myInfo.name;
+            const p = roomPlayers.find(p => p.id === id);
+            return p ? p.name : 'Jogador';
+        }
+
+        function getPlayerPositionById(id) {
+            if (id === myInfo.id) return camera.position.clone();
+            if (networkMeshes[id]) return networkMeshes[id].mesh.position.clone();
+            return null;
+        }
+
+        function getRemotePlayerDirection(id) {
+            if (!networkMeshes[id]) {
+                const fallback = new THREE.Vector3(0, 0.28, 1);
+                return fallback.normalize();
+            }
+
+            const rotY = networkMeshes[id].mesh.rotation.y;
+            const dir = new THREE.Vector3(Math.sin(rotY), 0.30, Math.cos(rotY));
+            return dir.normalize();
+        }
+
+        function resetBallCenter() {
+            ball.position.set(0, 5, 0);
+            ballVelocity.set(0, 0, 0);
+            endJuggle('reset');
+            cancelShotMiniHost();
+        }
+
+        function broadcastJuggleState() {
+            const payload = {
+                type: 'juggleState',
+                juggle: {
+                    active: juggle.active,
+                    playerId: juggle.playerId,
+                    playerName: juggle.playerName,
+                    count: juggle.count,
+                    meter: juggle.meter,
+                    zoneStart: juggle.zoneStart,
+                    zoneSize: juggle.zoneSize
+                }
+            };
+
+            if (isHost) {
+                handleJuggleStateClient(payload.juggle);
+                broadcast(payload);
+            }
+        }
+
+        function handleJuggleStateClient(data) {
+            juggle.active = data.active;
+            juggle.playerId = data.playerId;
+            juggle.playerName = data.playerName || '';
+            juggle.count = data.count || 0;
+            juggle.meter = data.meter ?? 0.5;
+            juggle.zoneStart = data.zoneStart ?? 0.36;
+            juggle.zoneSize = data.zoneSize ?? 0.28;
+            syncEmbaixadinhaUI();
+        }
+
+        function startJuggleHost(playerId) {
+            if (juggle.active || shotMini.active) return false;
+
+            const playerName = getPlayerNameById(playerId);
+            const playerPos = getPlayerPositionById(playerId);
+            if (!playerPos) return false;
+
+            if (playerPos.distanceTo(ball.position) > 5.2) return false;
+            if (ball.position.y > 3.2) return false;
+
+            juggle.active = true;
+            juggle.playerId = playerId;
+            juggle.playerName = playerName;
+            juggle.count = 0;
+            juggle.meter = 0.5;
+            juggle.meterDir = 1;
+            juggle.zoneStart = 0.36;
+            juggle.zoneSize = 0.28;
+            juggle.speed = 0.95;
+            juggle.timeout = juggle.failGrace;
+            juggle.bounceTime = 0;
+
+            ballVelocity.set(0, 0, 0);
+
+            broadcastJuggleState();
+            showGlobalEvent(`${playerName} começou a embaixadinha!`, 1800);
+            return true;
+        }
+
+        function endJuggle(reason = 'fail') {
+            if (!juggle.active) return;
+
+            const endedName = juggle.playerName;
+            const finalCount = juggle.count;
+
+            juggle.active = false;
+            juggle.playerId = null;
+            juggle.playerName = '';
+            juggle.count = 0;
+            juggle.bounceTime = 0;
+
+            if (reason === 'fail') {
+                showGlobalEvent(`${endedName} parou em ${finalCount} embaixadinhas.`, 1800);
+            }
+
+            broadcastJuggleState();
+            syncEmbaixadinhaUI();
+        }
+
+        function hostProcessJuggleInput(playerId) {
+            if (!juggle.active) return;
+            if (juggle.playerId !== playerId) return;
+
+            const zoneEnd = juggle.zoneStart + juggle.zoneSize;
+            const inside = juggle.meter >= juggle.zoneStart && juggle.meter <= zoneEnd;
+
+            if (inside) {
+                juggle.count += 1;
+                juggle.timeout = juggle.failGrace;
+                juggle.bounceTime = 0;
+
+                juggle.speed = clamp(juggle.speed + 0.07, 0.95, 2.35);
+                juggle.zoneSize = clamp(juggle.zoneSize - 0.012, 0.09, 0.28);
+
+                const center = clamp(juggle.meter + (Math.random() * 0.28 - 0.14), 0.10, 0.90);
+                juggle.zoneStart = clamp(center - juggle.zoneSize / 2, 0.02, 0.98 - juggle.zoneSize);
+
+                showGlobalEvent(`${juggle.playerName}: ${juggle.count} embaixadinha${juggle.count > 1 ? 's' : ''}!`, 800);
+                broadcastJuggleState();
+            } else {
+                endJuggle('fail');
+            }
+        }
+
+        function applyTouchImpulse(playerPos) {
+            if (juggle.active || shotMini.active) return;
+
+            const toBall = new THREE.Vector3().subVectors(ball.position, playerPos);
+            const dist = Math.hypot(toBall.x, toBall.z);
+            if (dist > 2.9 || dist < 0.001) return;
+
+            toBall.y = 0;
+            toBall.normalize();
+
+            const push = (1 - dist / 2.9) * TOUCH_PUSH_FORCE;
+            ballVelocity.x += toBall.x * push;
+            ballVelocity.z += toBall.z * push;
+        }
+
+        function handleNetworkData(senderId, data) {
+            if (!data || !data.type) return;
+
+            if (data.type === 'ping') {
+                if (isHost && connections[senderId]?.open) {
+                    connections[senderId].send({ type: 'pong', t: data.t });
+                }
+                return;
+            }
+
+            if (data.type === 'pong') {
+                pingMs = Date.now() - data.t;
+                return;
+            }
+
+            if (isHost) {
+                switch (data.type) {
+                    case 'joinReq': {
+                        const exists = roomPlayers.some(p => p.id === data.player.id);
+                        if (!exists) {
+                            roomPlayers.push({ ...data.player, isHost: false });
+                            updatePlayerListUI();
+                            broadcast({ type: 'lobbySync', players: roomPlayers });
+                        }
+                        break;
+                    }
+
+                    case 'updatePos': {
+                        if (!networkMeshes[senderId]) {
+                            const playerInfo = roomPlayers.find(p => p.id === senderId);
+                            if (playerInfo) networkMeshes[senderId] = createPlayerMesh(playerInfo);
+                        }
+
+                        if (networkMeshes[senderId]) {
+                            networkMeshes[senderId].targetPos.set(data.x, data.y, data.z);
+                            networkMeshes[senderId].targetRotY = data.rotY;
+                        }
+                        break;
+                    }
+
+                    case 'kick': {
+                        if (juggle.active) endJuggle('fail');
+                        cancelShotMiniHost();
+                        ballVelocity.set(data.dirX, data.dirY, data.dirZ).multiplyScalar(DIRECT_KICK_POWER);
+                        break;
+                    }
+
+                    case 'stopBall': {
+                        if (juggle.active) endJuggle('fail');
+                        cancelShotMiniHost();
+                        ballVelocity.set(0, 0, 0);
+                        break;
+                    }
+
+                    case 'startJuggleReq': {
+                        startJuggleHost(senderId);
+                        break;
+                    }
+
+                    case 'juggleInput': {
+                        if (data.cancel) {
+                            if (juggle.active && juggle.playerId === senderId) endJuggle('fail');
+                        } else {
+                            hostProcessJuggleInput(senderId);
+                        }
+                        break;
+                    }
+
+                    case 'startShotMiniReq': {
+                        startShotMiniHost(senderId);
+                        break;
+                    }
+
+                    case 'finishShotMiniReq': {
+                        finishShotMiniHost(senderId);
+                        break;
+                    }
+                }
+            } else {
+                switch (data.type) {
+                    case 'lobbySync':
+                        roomPlayers = data.players;
+                        updatePlayerListUI();
+                        break;
+
+                    case 'startGameCmd':
+                        buildGameScene();
+                        break;
+
+                    case 'gameState':
+                        handleGameStateFromHost(data);
+                        break;
+
+                    case 'juggleState':
+                        handleJuggleStateClient(data.juggle);
+                        break;
+
+                    case 'shotMiniState':
+                        handleShotMiniClient(data.shotMini);
+                        break;
+                }
+            }
+        }
+
+        function handleGameStateFromHost(data) {
+            ball.position.set(data.ball.x, data.ball.y, data.ball.z);
+            ballVelocity.set(data.ball.vx || 0, data.ball.vy || 0, data.ball.vz || 0);
+
+            placar1 = data.score1;
+            placar2 = data.score2;
+            document.getElementById('score1').innerText = placar1;
+            document.getElementById('score2').innerText = placar2;
+
+            if (data.juggle) handleJuggleStateClient(data.juggle);
+            if (data.shotMini) handleShotMiniClient(data.shotMini);
+
+            for (const id in data.positions) {
+                if (id === myInfo.id) continue;
+
+                if (!networkMeshes[id]) {
+                    const playerInfo = roomPlayers.find(p => p.id === id);
+                    if (playerInfo) networkMeshes[id] = createPlayerMesh(playerInfo);
+                }
+
+                const posData = data.positions[id];
+                if (networkMeshes[id]) {
+                    networkMeshes[id].targetPos.set(posData.x, posData.y, posData.z);
+                    networkMeshes[id].targetRotY = posData.rotY;
+                }
+            }
+        }
 
         document.getElementById('btnStartGame').onclick = () => {
-            broadcast({ type: 'startGameCmd' }); 
-            buildGameScene(); 
+            if (!isHost || hasGameStarted) return;
+            broadcast({ type: 'startGameCmd' });
+            buildGameScene();
         };
 
         function buildGameScene() {
+            if (hasGameStarted) return;
+            hasGameStarted = true;
+
             uiWaiting.style.display = 'none';
             uiGame.style.display = 'block';
-            document.body.appendChild(renderer.domElement);
-            camera.position.set((Math.random()-0.5)*20, 2, isHost ? 30 : -30);
-            roomPlayers.forEach(p => {
-                if(p.id !== myInfo.id) {
-                    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1.5, 3, 1.5), new THREE.MeshLambertMaterial({ color: 0x888888 }));
-                    textureLoader.load(p.char, (tex) => { mesh.material = new THREE.MeshLambertMaterial({ map: tex }); });
-                    mesh.position.set(0, -100, 0); 
-                    scene.add(mesh);
-                    networkMeshes[p.id] = { mesh: mesh, info: p };
+
+            if (!renderer.domElement.parentNode) {
+                document.body.appendChild(renderer.domElement);
+            }
+
+            const myStartZ = isHost ? 28 : -28;
+            const myStartX = (Math.random() - 0.5) * 18;
+
+            camera.position.set(myStartX, 2, myStartZ);
+            yaw = isHost ? Math.PI : 0;
+            pitch = 0;
+            camera.rotation.set(0, 0, 0);
+            camera.rotateY(yaw);
+
+            roomPlayers.forEach((p) => {
+                if (p.id !== myInfo.id && !networkMeshes[p.id]) {
+                    networkMeshes[p.id] = createPlayerMesh(p);
                 }
             });
+
             if (isHost) {
-                ball.position.set(0, 5, 0); ballVelocity.set(0, 0, 0);
-                setInterval(broadcastGameState, 1000 / 30); 
+                resetBallCenter();
+                if (gameStateInterval) clearInterval(gameStateInterval);
+                gameStateInterval = setInterval(broadcastGameState, 1000 / 24);
             } else {
-                setInterval(() => {
-                    const rotY = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ').y;
-                    hostConnection.send({ type: 'updatePos', x: camera.position.x, y: camera.position.y, z: camera.position.z, rotY: rotY });
-                }, 1000 / 30); 
+                if (sendPosInterval) clearInterval(sendPosInterval);
+                sendPosInterval = setInterval(sendMyPositionIfNeeded, 1000 / 20);
             }
-            animate(); 
+
+            syncEmbaixadinhaUI();
+            updateShotMiniUI();
+            animate();
         }
 
         function broadcastGameState() {
-            let posData = {};
-            const hostRotY = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ').y;
-            posData[myInfo.id] = { x: camera.position.x, y: camera.position.y, z: camera.position.z, rotY: hostRotY };
-            for (let id in networkMeshes) {
+            if (!isHost) return;
+
+            const posData = {};
+            posData[myInfo.id] = {
+                x: camera.position.x,
+                y: camera.position.y,
+                z: camera.position.z,
+                rotY: yaw
+            };
+
+            for (const id in networkMeshes) {
                 const p = networkMeshes[id].mesh;
-                posData[id] = { x: p.position.x, y: p.position.y, z: p.position.z, rotY: p.rotation.y };
+                posData[id] = {
+                    x: p.position.x,
+                    y: p.position.y,
+                    z: p.position.z,
+                    rotY: p.rotation.y
+                };
             }
-            broadcast({ type: 'gameState', ball: { x: ball.position.x, y: ball.position.y, z: ball.position.z }, positions: posData, score1: placar1, score2: placar2 });
+
+            broadcast({
+                type: 'gameState',
+                ball: {
+                    x: ball.position.x,
+                    y: ball.position.y,
+                    z: ball.position.z,
+                    vx: ballVelocity.x,
+                    vy: ballVelocity.y,
+                    vz: ballVelocity.z
+                },
+                positions: posData,
+                score1: placar1,
+                score2: placar2,
+                juggle: {
+                    active: juggle.active,
+                    playerId: juggle.playerId,
+                    playerName: juggle.playerName,
+                    count: juggle.count,
+                    meter: juggle.meter,
+                    zoneStart: juggle.zoneStart,
+                    zoneSize: juggle.zoneSize
+                },
+                shotMini: {
+                    active: shotMini.active,
+                    playerId: shotMini.playerId,
+                    playerName: shotMini.playerName,
+                    meter: shotMini.meter
+                }
+            });
         }
 
-        const keys = { w: false, a: false, s: false, d: false, shift: false, space: false };
-        let stamina = 100; let canSteal = true;
-        document.addEventListener('keydown', (e) => { let k = e.key.toLowerCase(); if(k===' ') k='space'; if(keys.hasOwnProperty(k)) keys[k] = true; });
-        document.addEventListener('keyup', (e) => { let k = e.key.toLowerCase(); if(k===' ') k='space'; if(keys.hasOwnProperty(k)) { keys[k] = false; if(k==='space') canSteal = true; }});
-        let pitch = 0, yaw = 0;
-        lockOverlay.addEventListener('mousedown', () => { document.body.requestPointerLock(); });
-        document.addEventListener('pointerlockchange', () => {
-            if (document.pointerLockElement === document.body) { lockOverlay.style.display = 'none'; } 
-            else { if (uiGame.style.display === 'block') { lockOverlay.style.display = 'flex'; } }
+        function sendMyPositionIfNeeded() {
+            if (isHost || !hostConnection || !hostConnection.open) return;
+
+            const rotY = yaw;
+            const p = camera.position;
+
+            const moved =
+                Math.abs(p.x - lastMoveSent.x) > 0.03 ||
+                Math.abs(p.y - lastMoveSent.y) > 0.03 ||
+                Math.abs(p.z - lastMoveSent.z) > 0.03 ||
+                Math.abs(rotY - lastMoveSent.rotY) > 0.02;
+
+            if (!moved) return;
+
+            hostConnection.send({
+                type: 'updatePos',
+                x: p.x,
+                y: p.y,
+                z: p.z,
+                rotY
+            });
+
+            lastMoveSent = { x: p.x, y: p.y, z: p.z, rotY };
+        }
+
+        function setKeyByCode(code, pressed) {
+            switch (code) {
+                case 'KeyW': keys.w = pressed; break;
+                case 'KeyA': keys.a = pressed; break;
+                case 'KeyS': keys.s = pressed; break;
+                case 'KeyD': keys.d = pressed; break;
+                case 'KeyE': keys.e = pressed; break;
+                case 'ShiftLeft':
+                case 'ShiftRight':
+                    keys.shift = pressed;
+                    break;
+                case 'Space':
+                    keys.space = pressed;
+                    break;
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            const wasEPressed = keys.e;
+            const wasSpacePressed = keys.space;
+            setKeyByCode(e.code, true);
+
+            if (e.code === 'KeyE' && !wasEPressed) onPressE();
+            if (e.code === 'Space' && !wasSpacePressed) onPressSpace();
         });
-        document.addEventListener('mousemove', (e) => {
+
+        document.addEventListener('keyup', (e) => {
+            setKeyByCode(e.code, false);
+        });
+
+        function onPressE() {
+            if (!hasGameStarted) return;
+            if (document.pointerLockElement !== document.body) return;
+            if (shotMini.active) return;
+
+            if (juggle.active) {
+                if (juggle.playerId === myInfo.id) {
+                    if (isHost) hostProcessJuggleInput(myInfo.id);
+                    else if (hostConnection && hostConnection.open) hostConnection.send({ type: 'juggleInput' });
+                }
+                return;
+            }
+
+            const nearBall = camera.position.distanceTo(ball.position) <= 5.2;
+            if (!nearBall) return;
+
+            if (isHost) startJuggleHost(myInfo.id);
+            else if (hostConnection && hostConnection.open) hostConnection.send({ type: 'startJuggleReq' });
+        }
+
+        function onPressSpace() {
+            if (!hasGameStarted) return;
+            if (document.pointerLockElement !== document.body) return;
+            if (juggle.active) return;
+
+            const nearBall = camera.position.distanceTo(ball.position) <= 6.0;
+            if (!nearBall) return;
+
+            if (shotMini.active) {
+                if (shotMini.playerId !== myInfo.id) return;
+
+                if (isHost) finishShotMiniHost(myInfo.id);
+                else if (hostConnection && hostConnection.open) hostConnection.send({ type: 'finishShotMiniReq' });
+            } else {
+                if (isHost) startShotMiniHost(myInfo.id);
+                else if (hostConnection && hostConnection.open) hostConnection.send({ type: 'startShotMiniReq' });
+            }
+        }
+
+        lockOverlay.addEventListener('mousedown', () => {
+            document.body.requestPointerLock();
+        });
+
+        document.addEventListener('pointerlockchange', () => {
             if (document.pointerLockElement === document.body) {
-                yaw -= e.movementX * 0.002; pitch -= e.movementY * 0.002;
-                pitch = Math.max(-Math.PI/2.2, Math.min(Math.PI/2.2, pitch));
-                camera.rotation.set(0, 0, 0); camera.rotateY(yaw); camera.rotateX(pitch);
+                lockOverlay.style.display = 'none';
+            } else if (uiGame.style.display === 'block') {
+                lockOverlay.style.display = 'flex';
             }
         });
+
+        document.addEventListener('mousemove', (e) => {
+            if (document.pointerLockElement !== document.body) return;
+
+            yaw -= e.movementX * 0.0022;
+            pitch -= e.movementY * 0.0022;
+            pitch = clamp(pitch, -Math.PI / 2.2, Math.PI / 2.2);
+
+            camera.rotation.set(0, 0, 0);
+            camera.rotateY(yaw);
+            camera.rotateX(pitch);
+        });
+
         document.addEventListener('mousedown', (e) => {
             if (document.pointerLockElement !== document.body) return;
-            if (camera.position.distanceTo(ball.position) < 6) {
-                const dir = new THREE.Vector3(); camera.getWorldDirection(dir); dir.y = 0.25; dir.normalize();
-                if (e.button === 0) {
-                    if (isHost) ballVelocity.copy(dir).multiplyScalar(1.6);
-                    else hostConnection.send({ type: 'kick', dirX: dir.x, dirY: dir.y, dirZ: dir.z });
-                } else if (e.button === 2) {
-                    if (isHost) ballVelocity.set(0,0,0);
-                    else hostConnection.send({ type: 'stopBall' });
+            if (!hasGameStarted) return;
+
+            const nearBall = camera.position.distanceTo(ball.position) <= 7.5;
+            if (!nearBall) return;
+
+            const dir = getKickDirection();
+
+            if (e.button === 0) {
+                if (juggle.active) {
+                    if (isHost) endJuggle('fail');
+                    else if (hostConnection && hostConnection.open) hostConnection.send({ type: 'juggleInput', cancel: true });
+                }
+
+                if (shotMini.active) {
+                    if (isHost) cancelShotMiniHost();
+                    else if (hostConnection && hostConnection.open) hostConnection.send({ type: 'finishShotMiniReq' });
+                }
+
+                if (isHost) {
+                    ballVelocity.copy(dir).multiplyScalar(DIRECT_KICK_POWER);
+                } else if (hostConnection && hostConnection.open) {
+                    hostConnection.send({
+                        type: 'kick',
+                        dirX: dir.x,
+                        dirY: dir.y,
+                        dirZ: dir.z
+                    });
+                }
+            }
+
+            if (e.button === 2) {
+                if (juggle.active && isHost) endJuggle('fail');
+                if (shotMini.active && isHost) cancelShotMiniHost();
+
+                if (isHost) {
+                    ballVelocity.set(0, 0, 0);
+                } else if (hostConnection && hostConnection.open) {
+                    hostConnection.send({ type: 'stopBall' });
                 }
             }
         });
 
-        function tryStealHost(posVector, dirVector) {
-            if (Math.hypot(posVector.x - ball.position.x, posVector.z - ball.position.z) < 7) { 
-                ball.position.x = posVector.x + dirVector.x * 2.5; ball.position.z = posVector.z + dirVector.z * 2.5;
-                ball.position.y = ballRadius; ballVelocity.set(dirVector.x * 0.3, 0, dirVector.z * 0.3);
+        let lastFrame = now();
+        let animating = false;
+
+        function animate() {
+            if (animating) return;
+            animating = true;
+
+            function frame() {
+                if (!hasGameStarted) {
+                    animating = false;
+                    return;
+                }
+
+                requestAnimationFrame(frame);
+
+                const t = now();
+                let dt = (t - lastFrame) / 1000;
+                lastFrame = t;
+                dt = Math.min(dt, 0.033);
+
+                updateLocalPlayer(dt);
+                updateRemotePlayers(dt);
+
+                if (isHost) {
+                    updateHostBall(dt);
+                    updateJuggleHost(dt);
+                    updateShotMiniHost(dt);
+                }
+
+                updateBallSpin(dt);
+                syncEmbaixadinhaUI();
+                updateShotMiniUI();
+
+                netStats.textContent = `NET: ${pingMs || '--'} ms`;
+                renderer.render(scene, camera);
+            }
+
+            lastFrame = now();
+            requestAnimationFrame(frame);
+        }
+
+        function updateLocalPlayer(dt) {
+            const dir = new THREE.Vector3();
+            camera.getWorldDirection(dir);
+            dir.y = 0;
+            if (dir.lengthSq() > 0) dir.normalize();
+
+            const right = new THREE.Vector3().crossVectors(dir, camera.up).normalize();
+
+            if (document.pointerLockElement === document.body) {
+                let moveZ = 0;
+                let moveX = 0;
+
+                if (keys.w) moveZ += 1;
+                if (keys.s) moveZ -= 1;
+                if (keys.a) moveX -= 1;
+                if (keys.d) moveX += 1;
+
+                let speed = 8.2;
+                const moving = moveX !== 0 || moveZ !== 0;
+
+                if (keys.shift && moving && stamina > 0) {
+                    speed = 15.5;
+                    stamina -= 42 * dt;
+                } else {
+                    stamina += 22 * dt;
+                }
+
+                stamina = clamp(stamina, 0, 100);
+                document.getElementById('staminaBar').style.width = stamina + '%';
+
+                const moveVec = new THREE.Vector3();
+                if (moveZ) moveVec.addScaledVector(dir, moveZ);
+                if (moveX) moveVec.addScaledVector(right, moveX);
+
+                if (moveVec.lengthSq() > 0) {
+                    moveVec.normalize();
+                    camera.position.addScaledVector(moveVec, speed * dt);
+                }
+            }
+
+            camera.position.x = clamp(camera.position.x, -fieldWidth / 2 + 1, fieldWidth / 2 - 1);
+            camera.position.z = clamp(camera.position.z, -fieldLength / 2 + 1, fieldLength / 2 - 1);
+            camera.position.y = 2;
+        }
+
+        function updateRemotePlayers(dt) {
+            const lerpFactor = 1 - Math.pow(0.001, dt);
+
+            for (const id in networkMeshes) {
+                const remote = networkMeshes[id];
+                remote.mesh.position.lerp(remote.targetPos, lerpFactor);
+                remote.mesh.rotation.y += (remote.targetRotY - remote.mesh.rotation.y) * lerpFactor;
             }
         }
 
-        function animate() {
-            requestAnimationFrame(animate);
-            const dir = new THREE.Vector3(); camera.getWorldDirection(dir); dir.y = 0; dir.normalize();
-            const right = new THREE.Vector3(); right.crossVectors(dir, camera.up).normalize();
-            if (document.pointerLockElement === document.body) {
-                if (keys.space && canSteal) {
-                    canSteal = false; 
-                    if (isHost) tryStealHost(camera.position, dir);
-                    else hostConnection.send({ type: 'steal', x: camera.position.x, y: camera.position.y, z: camera.position.z, dirX: dir.x, dirZ: dir.z });
+        function updateHostBall(dt) {
+            if (juggle.active) {
+                const p = getPlayerPositionById(juggle.playerId);
+                if (p) {
+                    juggle.bounceTime += dt * (8 + juggle.count * 0.18);
+
+                    const baseWave = Math.sin(juggle.bounceTime * 6.5);
+                    const secondWave = Math.sin(juggle.bounceTime * 13.0) * 0.22;
+                    const smoothBounce = Math.abs(baseWave + secondWave) * juggle.bounceAmplitude;
+                    const desiredY = ballRadius + juggle.baseHeight + smoothBounce;
+
+                    ball.position.x += (p.x - ball.position.x) * Math.min(1, 16 * dt);
+                    ball.position.z += (p.z - ball.position.z) * Math.min(1, 16 * dt);
+                    ball.position.y += (desiredY - ball.position.y) * Math.min(1, 18 * dt);
+
+                    ballVelocity.set(0, 0, 0);
+                } else {
+                    endJuggle('fail');
                 }
-                let moveZ = 0, moveX = 0;
-                if (keys.w) moveZ += 1; if (keys.s) moveZ -= 1;
-                if (keys.a) moveX -= 1; if (keys.d) moveX += 1;
-                let speed = 0.16;
-                if (keys.shift && (moveX||moveZ) && stamina > 0) { speed = 0.4; stamina -= 0.8; } else { stamina += 0.4; }
-                stamina = Math.max(0, Math.min(100, stamina));
-                document.getElementById('staminaBar').style.width = stamina + '%';
-                let moveVec = new THREE.Vector3();
-                if (moveZ) moveVec.addScaledVector(dir, moveZ); if (moveX) moveVec.addScaledVector(right, moveX); moveVec.normalize();
-                camera.position.addScaledVector(moveVec, speed);
+                return;
             }
-            camera.position.x = Math.max(-fieldWidth/2+1, Math.min(fieldWidth/2-1, camera.position.x));
-            camera.position.z = Math.max(-fieldLength/2+1, Math.min(fieldLength/2-1, camera.position.z));
-            camera.position.y = 2;
-            if (isHost) {
-                if (Math.hypot(camera.position.x - ball.position.x, camera.position.z - ball.position.z) < 2.5 && ball.position.y < 3) {
-                    ballVelocity.x += (ball.position.x - camera.position.x) * 0.02; ballVelocity.z += (ball.position.z - camera.position.z) * 0.02;
-                }
-                for(let id in networkMeshes) {
-                    let p = networkMeshes[id].mesh;
-                    if (Math.hypot(p.position.x - ball.position.x, p.position.z - ball.position.z) < 2.5 && ball.position.y < 3) {
-                        ballVelocity.x += (ball.position.x - p.position.x) * 0.02; ballVelocity.z += (ball.position.z - p.position.z) * 0.02;
+
+            applyTouchImpulse(camera.position);
+
+            for (const id in networkMeshes) {
+                applyTouchImpulse(networkMeshes[id].mesh.position);
+            }
+
+            ballVelocity.y -= 16 * dt;
+            ball.position.addScaledVector(ballVelocity, dt * 10);
+
+            if (ball.position.y < ballRadius) {
+                ball.position.y = ballRadius;
+                ballVelocity.y *= -0.42;
+                ballVelocity.x *= 0.972;
+                ballVelocity.z *= 0.972;
+            }
+
+            if (ball.position.x > fieldWidth / 2 - ballRadius) {
+                ball.position.x = fieldWidth / 2 - ballRadius;
+                ballVelocity.x *= -0.82;
+            }
+
+            if (ball.position.x < -fieldWidth / 2 + ballRadius) {
+                ball.position.x = -fieldWidth / 2 + ballRadius;
+                ballVelocity.x *= -0.82;
+            }
+
+            if (ball.position.z > fieldLength / 2 - ballRadius || ball.position.z < -fieldLength / 2 + ballRadius) {
+                if (Math.abs(ball.position.x) < 7) {
+                    if (ball.position.z > fieldLength / 2) {
+                        placar1++;
+                        document.getElementById('score1').innerText = placar1;
+                        resetBallCenter();
+                        showGlobalEvent('GOOOOL!');
+                    } else if (ball.position.z < -fieldLength / 2) {
+                        placar2++;
+                        document.getElementById('score2').innerText = placar2;
+                        resetBallCenter();
+                        showGlobalEvent('GOOOOL!');
+                    }
+                } else {
+                    if (ball.position.z > fieldLength / 2 - ballRadius) {
+                        ball.position.z = fieldLength / 2 - ballRadius;
+                        ballVelocity.z *= -0.82;
+                    }
+                    if (ball.position.z < -fieldLength / 2 + ballRadius) {
+                        ball.position.z = -fieldLength / 2 + ballRadius;
+                        ballVelocity.z *= -0.82;
                     }
                 }
-                ballVelocity.y -= 0.02; ball.position.add(ballVelocity);
-                if (ball.position.y < ballRadius) { ball.position.y = ballRadius; ballVelocity.y *= -0.5; ballVelocity.x *= 0.96; ballVelocity.z *= 0.96; }
-                if (ball.position.x > fieldWidth/2 - ballRadius) { ball.position.x = fieldWidth/2 - ballRadius; ballVelocity.x *= -0.8; }
-                if (ball.position.x < -fieldWidth/2 + ballRadius) { ball.position.x = -fieldWidth/2 + ballRadius; ballVelocity.x *= -0.8; }
-                if (ball.position.z > fieldLength/2 - ballRadius || ball.position.z < -fieldLength/2 + ballRadius) {
-                    if (Math.abs(ball.position.x) < 7) {
-                        if (ball.position.z > fieldLength/2) { placar1++; document.getElementById('score1').innerText = placar1; ball.position.set(0,5,0); ballVelocity.set(0,0,0); } 
-                        else if (ball.position.z < -fieldLength/2) { placar2++; document.getElementById('score2').innerText = placar2; ball.position.set(0,5,0); ballVelocity.set(0,0,0); }
-                    } else {
-                        if (ball.position.z > fieldLength/2 - ballRadius) { ball.position.z = fieldLength/2 - ballRadius; ballVelocity.z *= -0.8; }
-                        if (ball.position.z < -fieldLength/2 + ballRadius) { ball.position.z = -fieldLength/2 + ballRadius; ballVelocity.z *= -0.8; }
-                    }
-                }
             }
-            if (Math.abs(ballVelocity.x) > 0.01 || Math.abs(ballVelocity.z) > 0.01) {
-                ball.rotation.x += (isHost ? ballVelocity.z : 0.1) * 0.5;
-                ball.rotation.z -= (isHost ? ballVelocity.x : 0.1) * 0.5;
-            }
-            renderer.render(scene, camera);
         }
+
+        function updateJuggleHost(dt) {
+            if (!juggle.active) return;
+
+            juggle.meter += juggle.meterDir * juggle.speed * dt;
+
+            if (juggle.meter >= 1) {
+                juggle.meter = 1;
+                juggle.meterDir = -1;
+            } else if (juggle.meter <= 0) {
+                juggle.meter = 0;
+                juggle.meterDir = 1;
+            }
+
+            juggle.timeout -= dt;
+            if (juggle.timeout <= 0) {
+                endJuggle('fail');
+                return;
+            }
+
+            const currentTime = performance.now();
+            if (currentTime - lastBroadcastAt > 66) {
+                broadcastJuggleState();
+                lastBroadcastAt = currentTime;
+            }
+        }
+
+        function updateBallSpin(dt) {
+            if (juggle.active) {
+                ball.rotation.x += dt * 9.2;
+                ball.rotation.z += dt * 3.8;
+                ball.rotation.y += dt * 2.6;
+                return;
+            }
+
+            const vx = ballVelocity.x;
+            const vz = ballVelocity.z;
+
+            if (Math.abs(vx) > 0.01 || Math.abs(vz) > 0.01) {
+                ball.rotation.x += vz * dt * 3.6;
+                ball.rotation.z -= vx * dt * 3.6;
+                ball.rotation.y += (Math.abs(vx) + Math.abs(vz)) * dt * 0.65;
+            }
+        }
+
         window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
     </script>
