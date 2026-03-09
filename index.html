@@ -333,13 +333,17 @@
             top: 84px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(0,0,0,0.76);
-            border: 1px solid rgba(255,255,255,0.12);
+            background: rgba(0,0,0,0.85);
+            border: 2px solid rgba(255,255,255,0.2);
             border-radius: 10px;
-            padding: 10px 16px;
+            padding: 14px 24px;
             z-index: 16;
-            font-weight: 700;
+            font-weight: 900;
+            font-size: 22px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
             display: none;
+            text-align: center;
         }
 
         #netStats {
@@ -364,10 +368,11 @@
             pointer-events: none;
             justify-content: center;
             align-items: center;
-            font-size: 40px;
+            font-size: 50px;
             font-weight: bold;
             color: white;
             text-shadow: 2px 2px 10px red;
+            text-transform: uppercase;
         }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -439,6 +444,7 @@
             <b>SHIFT</b>: Correr<br>
             <b>ESPAÇO</b>: Pular / Cabecear<br>
             <b>C</b>: Carrinho<br>
+            <b>G</b>: Murro (Manda pra longe)<br>
             <b>Cliq. Esq.</b>: Chute forte direto<br>
             <b>Cliq. Dir.</b>: Cavadinha<br>
             <b>R</b>: Passe automático<br>
@@ -669,7 +675,9 @@
         const fieldWidth = 60;
         const fieldLength = 100;
         const ballRadius = 0.6;
-        const DIRECT_KICK_POWER = 4.2;
+        
+        // POTÊNCIAS ATUALIZADAS
+        const DIRECT_KICK_POWER = 6.8; 
         const TOUCH_PUSH_FORCE = 2.3;
 
         const worldGroup = new THREE.Group();
@@ -778,7 +786,7 @@
         let sendPosInterval = null;
         let lastBroadcastAt = 0;
 
-        const keys = { w: false, a: false, s: false, d: false, shift: false, space: false, e: false, f: false, c: false, r: false };
+        const keys = { w: false, a: false, s: false, d: false, shift: false, space: false, e: false, f: false, c: false, r: false, g: false };
 
         let stamina = 100;
         let pitch = 0;
@@ -790,11 +798,26 @@
         let isJumping = false;
         let isSliding = false;
         let slideTimer = 0;
+        let slideCooldown = 0; // Cooldown do carrinho
         let isStunned = false;
         let stunTimer = 0;
+        
+        // Variaveis de Murro (Knockback físico)
+        let punchVx = 0;
+        let punchVy = 0;
+        let punchVz = 0;
 
         let slidingPlayers = {};
         let stunnedPlayers = {};
+
+        // Rastreamento para Gol Contra
+        let lastTouchTeam = null;
+        let lastTouchName = '';
+
+        function updateLastTouch(id) {
+            lastTouchTeam = getPlayerTeamById(id);
+            lastTouchName = getPlayerNameById(id);
+        }
 
         const globalEventText = document.getElementById('globalEventText');
 
@@ -839,9 +862,19 @@
             timeout: 1.6
         };
 
-        function showGlobalEvent(msg, ms = 1600) {
+        function showGlobalEvent(msg, ms = 2200) {
             globalEventText.textContent = msg;
             globalEventText.style.display = 'block';
+            
+            // Troca cor baseada na mensagem para o Gol Contra chamar atenção
+            if(msg.includes('CONTRA')) {
+                globalEventText.style.color = '#ef4444'; // Red
+            } else if(msg.includes('GOL')) {
+                globalEventText.style.color = '#facc15'; // Gold
+            } else {
+                globalEventText.style.color = 'white';
+            }
+
             clearTimeout(showGlobalEvent._timer);
             showGlobalEvent._timer = setTimeout(() => {
                 globalEventText.style.display = 'none';
@@ -960,7 +993,8 @@
             if (isPerfect) {
                 showGlobalEvent(`${shotMini.playerName} acertou um chute perfeito!`, 1200);
             }
-
+            
+            updateLastTouch(playerId);
             cancelShotMiniHost();
         }
 
@@ -1047,6 +1081,8 @@
         function resetBallCenter() {
             ball.position.set(0, 5, 0);
             ballVelocity.set(0, 0, 0);
+            lastTouchTeam = null;
+            lastTouchName = '';
             endJuggle('reset');
             cancelShotMiniHost();
         }
@@ -1105,6 +1141,7 @@
             juggle.bounceTime = 0;
 
             ballVelocity.set(0, 0, 0);
+            updateLastTouch(playerId);
 
             broadcastJuggleState();
             showGlobalEvent(`${playerName} começou a embaixadinha!`, 1800);
@@ -1123,7 +1160,7 @@
             juggle.count = 0;
             juggle.bounceTime = 0;
 
-            if (reason === 'fail') {
+            if (reason === 'fail' && finalCount > 1) {
                 showGlobalEvent(`${endedName} parou em ${finalCount} embaixadinhas.`, 1800);
             }
 
@@ -1181,16 +1218,18 @@
                 const targetPos = getPlayerPositionById(nearestAlly.id);
                 const dir = new THREE.Vector3().subVectors(targetPos, ball.position).normalize();
                 
-                ballVelocity.copy(dir).multiplyScalar(14);
-                ballVelocity.y = 2.0; 
-                showGlobalEvent(`Lindo passe de ${getPlayerNameById(playerId)}!`, 1000);
+                // Força e altura do passe balanceados
+                ballVelocity.copy(dir).multiplyScalar(9);
+                ballVelocity.y = 1.5; 
+                showGlobalEvent(`Passe automático de ${getPlayerNameById(playerId)}!`, 1000);
             } else {
                 const dir = playerId === myInfo.id ? getKickDirection() : getRemotePlayerDirection(playerId);
                 ballVelocity.copy(dir).multiplyScalar(8);
             }
+            updateLastTouch(playerId);
         }
 
-        function applyTouchImpulse(playerPos) {
+        function applyTouchImpulse(playerPos, playerId) {
             if (juggle.active || shotMini.active) return;
 
             const toBall = new THREE.Vector3().subVectors(ball.position, playerPos);
@@ -1211,6 +1250,8 @@
             ballVelocity.x += toBall.x * push;
             ballVelocity.z += toBall.z * push;
             if (toBall.y !== 0) ballVelocity.y += toBall.y * push * 2;
+            
+            updateLastTouch(playerId);
         }
 
         function handleNetworkData(senderId, data) {
@@ -1257,6 +1298,7 @@
                         if (juggle.active) endJuggle('fail');
                         cancelShotMiniHost();
                         ballVelocity.set(data.dirX, data.dirY, data.dirZ).multiplyScalar(DIRECT_KICK_POWER);
+                        updateLastTouch(senderId);
                         break;
                     }
 
@@ -1264,13 +1306,38 @@
                         if (juggle.active) endJuggle('fail');
                         cancelShotMiniHost();
                         const dir = new THREE.Vector3(data.dirX, data.dirY, data.dirZ);
-                        ballVelocity.copy(dir).multiplyScalar(DIRECT_KICK_POWER * 0.5);
-                        ballVelocity.y = 12.0; // Puxou a bola pro alto
+                        ballVelocity.copy(dir).multiplyScalar(DIRECT_KICK_POWER * 0.40);
+                        ballVelocity.y = 6.5; 
+                        updateLastTouch(senderId);
                         break;
                     }
 
                     case 'passReq': {
                         executePassHost(senderId);
+                        break;
+                    }
+
+                    case 'punchReq': {
+                        const pPos = getPlayerPositionById(senderId);
+                        const pTeam = getPlayerTeamById(senderId);
+
+                        roomPlayers.forEach(other => {
+                            if (other.id !== senderId && other.team !== pTeam) {
+                                const oPos = getPlayerPositionById(other.id);
+                                if (oPos && pPos.distanceTo(oPos) < 3.5) {
+                                    const dir = new THREE.Vector3().subVectors(oPos, pPos).normalize();
+                                    
+                                    if (other.id === myInfo.id) {
+                                        applyLocalPunch(dir);
+                                    } else {
+                                        const conn = connections[other.id];
+                                        if (conn && conn.open) conn.send({ type: 'punchedCmd', dx: dir.x, dz: dir.z });
+                                        stunnedPlayers[other.id] = 1.8;
+                                    }
+                                    showGlobalEvent(`${getPlayerNameById(senderId)} deu um murro em ${other.name}!`, 2000);
+                                }
+                            }
+                        });
                         break;
                     }
 
@@ -1306,7 +1373,7 @@
                     }
 
                     case 'startSlide': {
-                        slidingPlayers[senderId] = 0.35; // Tempo ajustado
+                        slidingPlayers[senderId] = 0.35; 
                         break;
                     }
                 }
@@ -1336,14 +1403,32 @@
                     case 'stunCmd':
                         if (data.targetId === myInfo.id) {
                             isStunned = true;
-                            stunTimer = 5.0;
+                            stunTimer = 1.8;
                             isSliding = false;
                             isJumping = false;
                             showGlobalEvent('VOCÊ FOI DERRUBADO!', 2000);
                         }
                         break;
+                        
+                    case 'punchedCmd':
+                        const punchDir = new THREE.Vector3(data.dx, 0, data.dz);
+                        applyLocalPunch(punchDir);
+                        break;
                 }
             }
+        }
+        
+        function applyLocalPunch(dir) {
+            isStunned = true;
+            stunTimer = 1.8;
+            isSliding = false;
+            isJumping = false;
+            
+            punchVx = dir.x * 22; // Força horizontal do voo
+            punchVy = 10;         // Força vertical do voo
+            punchVz = dir.z * 22;
+            
+            showGlobalEvent('VOCÊ TOMOU UM MURRO!', 2000);
         }
 
         function handleGameStateFromHost(data) {
@@ -1511,6 +1596,7 @@
                 case 'KeyF': keys.f = pressed; break;
                 case 'KeyC': keys.c = pressed; break;
                 case 'KeyR': keys.r = pressed; break;
+                case 'KeyG': keys.g = pressed; break;
                 case 'Space': keys.space = pressed; break;
                 case 'ShiftLeft':
                 case 'ShiftRight':
@@ -1523,12 +1609,14 @@
             const wasEPressed = keys.e;
             const wasFPressed = keys.f;
             const wasRPressed = keys.r;
+            const wasGPressed = keys.g;
 
             setKeyByCode(e.code, true);
 
             if (e.code === 'KeyE' && !wasEPressed) onPressE();
             if (e.code === 'KeyF' && !wasFPressed) onPressF();
             if (e.code === 'KeyR' && !wasRPressed) onPressR();
+            if (e.code === 'KeyG' && !wasGPressed) onPressG();
         });
 
         document.addEventListener('keyup', (e) => {
@@ -1586,6 +1674,34 @@
             else if (hostConnection && hostConnection.open) hostConnection.send({ type: 'passReq' });
         }
 
+        function onPressG() {
+            if (!hasGameStarted) return;
+            if (document.pointerLockElement !== document.body) return;
+            if (isStunned || isSliding) return;
+            
+            if (isHost) {
+                const pPos = getPlayerPositionById(myInfo.id);
+                const pTeam = getPlayerTeamById(myInfo.id);
+
+                roomPlayers.forEach(other => {
+                    if (other.id !== myInfo.id && other.team !== pTeam) {
+                        const oPos = getPlayerPositionById(other.id);
+                        if (oPos && pPos.distanceTo(oPos) < 3.5) {
+                            const dir = new THREE.Vector3().subVectors(oPos, pPos).normalize();
+                            
+                            const conn = connections[other.id];
+                            if (conn && conn.open) conn.send({ type: 'punchedCmd', dx: dir.x, dz: dir.z });
+                            stunnedPlayers[other.id] = 1.8;
+                            
+                            showGlobalEvent(`${myInfo.name} deu um murro em ${other.name}!`, 2000);
+                        }
+                    }
+                });
+            } else if (hostConnection && hostConnection.open) {
+                hostConnection.send({ type: 'punchReq' });
+            }
+        }
+
         lockOverlay.addEventListener('mousedown', () => {
             document.body.requestPointerLock();
         });
@@ -1621,7 +1737,7 @@
 
             const dir = getKickDirection();
 
-            // Chute Forte
+            // Chute Forte (M1)
             if (e.button === 0) {
                 if (juggle.active) {
                     if (isHost) endJuggle('fail');
@@ -1635,19 +1751,21 @@
 
                 if (isHost) {
                     ballVelocity.copy(dir).multiplyScalar(DIRECT_KICK_POWER);
+                    updateLastTouch(myInfo.id);
                 } else if (hostConnection && hostConnection.open) {
                     hostConnection.send({ type: 'kick', dirX: dir.x, dirY: dir.y, dirZ: dir.z });
                 }
             }
 
-            // Cavadinha (Bola pro alto)
+            // Cavadinha (M2)
             if (e.button === 2) {
                 if (juggle.active && isHost) endJuggle('fail');
                 if (shotMini.active && isHost) cancelShotMiniHost();
 
                 if (isHost) {
-                    ballVelocity.copy(dir).multiplyScalar(DIRECT_KICK_POWER * 0.5);
-                    ballVelocity.y = 12.0; // Puxou a bola pro alto
+                    ballVelocity.copy(dir).multiplyScalar(DIRECT_KICK_POWER * 0.40);
+                    ballVelocity.y = 6.5; 
+                    updateLastTouch(myInfo.id);
                 } else if (hostConnection && hostConnection.open) {
                     hostConnection.send({ type: 'cavadinha', dirX: dir.x, dirY: dir.y, dirZ: dir.z });
                 }
@@ -1696,25 +1814,56 @@
         }
 
         function updateLocalPlayer(dt) {
+            if (slideCooldown > 0) slideCooldown -= dt;
+
+            // FÍSICA DE STUN / MURRO / QUEDA
             if (isStunned) {
                 stunTimer -= dt;
                 stunOverlay.style.display = 'flex';
-                camera.position.y = 0.5; 
+                
+                // Aplica Knockback físico se tomou murro
+                punchVy -= 25 * dt; // Gravidade no ar
+                camera.position.x += punchVx * dt;
+                camera.position.y += punchVy * dt;
+                camera.position.z += punchVz * dt;
+                
+                // Atrito no ar
+                punchVx *= 0.95; 
+                punchVz *= 0.95;
+                
+                // Bateu no chão
+                if (camera.position.y <= 0.5) {
+                    camera.position.y = 0.5;
+                    punchVy = 0;
+                    punchVx *= 0.8; // Atrito forte no chão
+                    punchVz *= 0.8;
+                }
+
                 camera.rotation.set(0, 0, 0);
                 camera.rotateY(yaw);
                 camera.rotateX(pitch);
-                camera.rotateZ(Math.PI / 2);
+                camera.rotateZ(Math.PI / 2); // Deitado
+                
+                // Limita mapa pra não voar pra fora
+                camera.position.x = clamp(camera.position.x, -fieldWidth / 2 + 1, fieldWidth / 2 - 1);
+                camera.position.z = clamp(camera.position.z, -fieldLength / 2 + 1, fieldLength / 2 - 1);
+
                 if (stunTimer <= 0) {
                     isStunned = false;
                     stunOverlay.style.display = 'none';
                     camera.rotation.z = 0;
+                    punchVx = 0;
+                    punchVy = 0;
+                    punchVz = 0;
                 }
                 return; 
             }
 
-            if (keys.c && !isSliding && stamina >= 20 && !isJumping) {
+            // Carrinho
+            if (keys.c && !isSliding && stamina >= 20 && !isJumping && slideCooldown <= 0) {
                 isSliding = true;
-                slideTimer = 0.35; // Diminuído
+                slideTimer = 0.35; 
+                slideCooldown = 3.0; // 3 Segundos sem poder usar de novo
                 stamina -= 20;
                 
                 if (isHost) slidingPlayers[myInfo.id] = 0.35;
@@ -1726,6 +1875,7 @@
                 if (slideTimer <= 0) isSliding = false;
             }
 
+            // Pulo
             if (keys.space && !isJumping && !isSliding && stamina >= 10) {
                 isJumping = true;
                 playerVy = 6.5; 
@@ -1810,6 +1960,7 @@
         }
 
         function updateHostPhysicsAndBall(dt) {
+            // FÍSICA DO CARRINHO (HOST)
             for (let id in slidingPlayers) {
                 slidingPlayers[id] -= dt;
                 if (slidingPlayers[id] <= 0) {
@@ -1824,16 +1975,17 @@
                     const toBall = new THREE.Vector3().subVectors(ball.position, pPos).normalize();
                     toBall.y = 0.2; 
                     ballVelocity.add(toBall.multiplyScalar(20 * dt)); 
+                    updateLastTouch(id);
                 }
 
                 for (let other of roomPlayers) {
                     if (other.id !== id && !stunnedPlayers[other.id]) {
                         const oPos = getPlayerPositionById(other.id);
                         if (oPos && pPos.distanceTo(oPos) < 2.5 && other.team !== pTeam) {
-                            stunnedPlayers[other.id] = 5.0; 
+                            stunnedPlayers[other.id] = 1.8; 
                             if (other.id === myInfo.id) {
                                 isStunned = true;
-                                stunTimer = 5.0;
+                                stunTimer = 1.8;
                                 showGlobalEvent('VOCÊ FOI DERRUBADO!', 2000);
                             } else {
                                 const conn = connections[other.id];
@@ -1871,12 +2023,13 @@
                 return;
             }
 
-            applyTouchImpulse(camera.position);
-
+            // Encostões do Player na bola
+            applyTouchImpulse(camera.position, myInfo.id);
             for (const id in networkMeshes) {
-                applyTouchImpulse(networkMeshes[id].mesh.position);
+                applyTouchImpulse(networkMeshes[id].mesh.position, id);
             }
 
+            // FÍSICA E GRAVIDADE DA BOLA
             ballVelocity.y -= 16 * dt; 
             ball.position.addScaledVector(ballVelocity, dt * 10);
 
@@ -1897,20 +2050,37 @@
                 ballVelocity.x *= -0.82;
             }
 
+            // SISTEMA DE GOLS
             if (ball.position.z > fieldLength / 2 - ballRadius || ball.position.z < -fieldLength / 2 + ballRadius) {
                 if (Math.abs(ball.position.x) < 7) { 
+                    
+                    // Lado Verde (Z positivo) - Azul tenta fazer gol aqui
                     if (ball.position.z > fieldLength / 2) {
-                        placar1++; 
+                        if (lastTouchTeam === 'green') {
+                            placar1++; 
+                            showGlobalEvent(`GOL CONTRA DE ${lastTouchName.toUpperCase()}!`);
+                        } else {
+                            placar1++; 
+                            showGlobalEvent(`GOL DA EQUIPE AZUL! (${lastTouchName || '?'})`);
+                        }
                         document.getElementById('score1').innerText = placar1;
                         resetBallCenter();
-                        showGlobalEvent('GOOOOL DA EQUIPE AZUL!');
-                    } else if (ball.position.z < -fieldLength / 2) {
-                        placar2++; 
+                    } 
+                    
+                    // Lado Azul (Z negativo) - Verde tenta fazer gol aqui
+                    else if (ball.position.z < -fieldLength / 2) {
+                        if (lastTouchTeam === 'blue') {
+                            placar2++; 
+                            showGlobalEvent(`GOL CONTRA DE ${lastTouchName.toUpperCase()}!`);
+                        } else {
+                            placar2++; 
+                            showGlobalEvent(`GOL DA EQUIPE VERDE! (${lastTouchName || '?'})`);
+                        }
                         document.getElementById('score2').innerText = placar2;
                         resetBallCenter();
-                        showGlobalEvent('GOOOOL DA EQUIPE VERDE!');
                     }
                 } else {
+                    // Bateu na parede do fundo fora do gol
                     if (ball.position.z > fieldLength / 2 - ballRadius) {
                         ball.position.z = fieldLength / 2 - ballRadius;
                         ballVelocity.z *= -0.82;
