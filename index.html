@@ -57,10 +57,12 @@
             <input type="text" id="playerName" placeholder="Seu Nome" maxlength="12">
             <select id="playerChar">
                 <option value="brisa.png">Brisa</option>
+                <option value="edson.png">Edson</option>
                 <option value="eduarda.png">Eduarda</option>
                 <option value="gabriela.png">Gabriela</option>
                 <option value="joão.png">João</option>
                 <option value="leo.png">Leo</option>
+                <option value="rafa.png">Rafa</option>
                 <option value="rafaela.png">Rafaela</option>
                 <option value="taiana.png">Taiana</option>
             </select>
@@ -111,12 +113,8 @@
     </div>
 
     <script>
-        // Previne menu do clique direito
         window.addEventListener('contextmenu', e => e.preventDefault());
 
-        // ==========================================
-        // 1. SISTEMA DE LOBBY E REDE
-        // ==========================================
         let peer;
         let connections = {}; 
         let isHost = false;
@@ -148,21 +146,17 @@
             myInfo.name = document.getElementById('playerName').value || "Host";
             myInfo.char = document.getElementById('playerChar').value;
             const code = generateCode();
-            
             statusTxt.innerText = "Criando sala...";
             peer = new Peer(code);
-            
             peer.on('open', (id) => {
                 isHost = true; myInfo.id = id;
                 roomPlayers.push({ ...myInfo, isHost: true });
-                
                 uiMenu.style.display = 'none';
                 uiWaiting.style.display = 'flex';
                 document.getElementById('displayRoomCode').innerText = id;
                 document.getElementById('btnStartGame').style.display = 'block';
                 updatePlayerListUI();
             });
-
             peer.on('connection', (conn) => {
                 connections[conn.peer] = conn;
                 conn.on('data', (data) => handleNetworkData(conn.peer, data));
@@ -174,24 +168,19 @@
             myInfo.char = document.getElementById('playerChar').value;
             const code = document.getElementById('joinCode').value;
             if(code.length !== 6) return alert("Digite os 6 dígitos!");
-
             statusTxt.innerText = "Entrando na sala...";
             peer = new Peer(); 
-            
             peer.on('open', (id) => {
                 myInfo.id = id;
                 hostConnection = peer.connect(code);
-                
                 hostConnection.on('open', () => {
                     isHost = false;
                     hostConnection.send({ type: 'joinReq', player: myInfo });
-                    
                     uiMenu.style.display = 'none';
                     uiWaiting.style.display = 'flex';
                     document.getElementById('displayRoomCode').innerText = code;
                     document.getElementById('waitingText').style.display = 'block'; 
                 });
-
                 hostConnection.on('data', (data) => handleNetworkData('host', data));
                 hostConnection.on('error', () => { alert("Sala não encontrada!"); location.reload(); });
             });
@@ -203,27 +192,21 @@
                     roomPlayers.push({ ...data.player, isHost: false });
                     updatePlayerListUI();
                     broadcast({ type: 'lobbySync', players: roomPlayers });
-                }
-                else if (data.type === 'updatePos') {
+                } else if (data.type === 'updatePos') {
                     if(networkMeshes[senderId]) {
                         networkMeshes[senderId].mesh.position.set(data.x, data.y, data.z);
                         networkMeshes[senderId].mesh.rotation.y = data.rotY;
                     }
-                }
-                else if (data.type === 'kick') { ballVelocity.copy(new THREE.Vector3(data.dirX, data.dirY, data.dirZ)).multiplyScalar(1.6); }
+                } else if (data.type === 'kick') { ballVelocity.copy(new THREE.Vector3(data.dirX, data.dirY, data.dirZ)).multiplyScalar(1.6); }
                 else if (data.type === 'stopBall') { ballVelocity.set(0,0,0); }
                 else if (data.type === 'steal') { tryStealHost(new THREE.Vector3(data.x, data.y, data.z), new THREE.Vector3(data.dirX, 0, data.dirZ)); }
             } else {
-                if (data.type === 'lobbySync') {
-                    roomPlayers = data.players;
-                    updatePlayerListUI();
-                }
+                if (data.type === 'lobbySync') { roomPlayers = data.players; updatePlayerListUI(); }
                 else if (data.type === 'startGameCmd') { buildGameScene(); }
                 else if (data.type === 'gameState') {
                     ball.position.set(data.ball.x, data.ball.y, data.ball.z);
                     document.getElementById('score1').innerText = data.score1;
                     document.getElementById('score2').innerText = data.score2;
-                    
                     for (let id in data.positions) {
                         if (id === myInfo.id) continue;
                         let posData = data.positions[id];
@@ -238,9 +221,6 @@
 
         function broadcast(data) { for (let id in connections) connections[id].send(data); }
 
-        // ==========================================
-        // 2. O JOGO 3D
-        // ==========================================
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x0f172a); 
         const camera = new THREE.PerspectiveCamera(80, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -251,7 +231,7 @@
         const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
         dirLight.position.set(20, 100, 20); scene.add(dirLight);
 
-        const fieldWidth = 60; const fieldLength = 100;
+        const fieldWidth = 60, fieldLength = 100;
         const field = new THREE.Mesh(new THREE.PlaneGeometry(fieldWidth, fieldLength), new THREE.MeshLambertMaterial({ color: 0x10b981 }));
         field.rotation.x = -Math.PI / 2; scene.add(field);
         
@@ -282,9 +262,7 @@
             uiWaiting.style.display = 'none';
             uiGame.style.display = 'block';
             document.body.appendChild(renderer.domElement);
-            
             camera.position.set((Math.random()-0.5)*20, 2, isHost ? 30 : -30);
-            
             roomPlayers.forEach(p => {
                 if(p.id !== myInfo.id) {
                     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1.5, 3, 1.5), new THREE.MeshLambertMaterial({ color: 0x888888 }));
@@ -294,7 +272,6 @@
                     networkMeshes[p.id] = { mesh: mesh, info: p };
                 }
             });
-
             if (isHost) {
                 ball.position.set(0, 5, 0); ballVelocity.set(0, 0, 0);
                 setInterval(broadcastGameState, 1000 / 30); 
@@ -304,7 +281,6 @@
                     hostConnection.send({ type: 'updatePos', x: camera.position.x, y: camera.position.y, z: camera.position.z, rotY: rotY });
                 }, 1000 / 30); 
             }
-
             animate(); 
         }
 
@@ -312,61 +288,32 @@
             let posData = {};
             const hostRotY = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ').y;
             posData[myInfo.id] = { x: camera.position.x, y: camera.position.y, z: camera.position.z, rotY: hostRotY };
-            
             for (let id in networkMeshes) {
                 const p = networkMeshes[id].mesh;
                 posData[id] = { x: p.position.x, y: p.position.y, z: p.position.z, rotY: p.rotation.y };
             }
-
             broadcast({ type: 'gameState', ball: { x: ball.position.x, y: ball.position.y, z: ball.position.z }, positions: posData, score1: placar1, score2: placar2 });
         }
 
-        // ==========================================
-        // 3. CONTROLES E START (SISTEMA PROFISSIONAL DE MOUSE)
-        // ==========================================
         const keys = { w: false, a: false, s: false, d: false, shift: false, space: false };
         let stamina = 100; let canSteal = true;
-
         document.addEventListener('keydown', (e) => { let k = e.key.toLowerCase(); if(k===' ') k='space'; if(keys.hasOwnProperty(k)) keys[k] = true; });
         document.addEventListener('keyup', (e) => { let k = e.key.toLowerCase(); if(k===' ') k='space'; if(keys.hasOwnProperty(k)) { keys[k] = false; if(k==='space') canSteal = true; }});
-
         let pitch = 0, yaw = 0;
-        
-        // Clica no overlay negro para travar o mouse e jogar
-        lockOverlay.addEventListener('mousedown', () => {
-            document.body.requestPointerLock();
-        });
-
-        // Gerencia se o mouse está travado ou não
+        lockOverlay.addEventListener('mousedown', () => { document.body.requestPointerLock(); });
         document.addEventListener('pointerlockchange', () => {
-            if (document.pointerLockElement === document.body) {
-                // Mouse travado! Esconde o aviso de pause e joga!
-                lockOverlay.style.display = 'none';
-            } else {
-                // Mouse destravado (usuário apertou ESC). Mostra a tela de pause.
-                if (uiGame.style.display === 'block') {
-                    lockOverlay.style.display = 'flex';
-                }
-            }
+            if (document.pointerLockElement === document.body) { lockOverlay.style.display = 'none'; } 
+            else { if (uiGame.style.display === 'block') { lockOverlay.style.display = 'flex'; } }
         });
-
-        // Câmera segue o movimento natural do FPS (só gira se estiver travado)
         document.addEventListener('mousemove', (e) => {
             if (document.pointerLockElement === document.body) {
-                yaw -= e.movementX * 0.002;
-                pitch -= e.movementY * 0.002;
+                yaw -= e.movementX * 0.002; pitch -= e.movementY * 0.002;
                 pitch = Math.max(-Math.PI/2.2, Math.min(Math.PI/2.2, pitch));
-                
-                camera.rotation.set(0, 0, 0); 
-                camera.rotateY(yaw); 
-                camera.rotateX(pitch);
+                camera.rotation.set(0, 0, 0); camera.rotateY(yaw); camera.rotateX(pitch);
             }
         });
-
-        // Chutes e Paradas
         document.addEventListener('mousedown', (e) => {
-            if (document.pointerLockElement !== document.body) return; // Só chuta se o mouse estiver travado no jogo
-            
+            if (document.pointerLockElement !== document.body) return;
             if (camera.position.distanceTo(ball.position) < 6) {
                 const dir = new THREE.Vector3(); camera.getWorldDirection(dir); dir.y = 0.25; dir.normalize();
                 if (e.button === 0) {
@@ -386,42 +333,30 @@
             }
         }
 
-        // ==========================================
-        // 4. LOOP DE RENDERIZAÇÃO
-        // ==========================================
         function animate() {
             requestAnimationFrame(animate);
-
             const dir = new THREE.Vector3(); camera.getWorldDirection(dir); dir.y = 0; dir.normalize();
             const right = new THREE.Vector3(); right.crossVectors(dir, camera.up).normalize();
-
-            // Só permite andar e interagir se a tela não estiver pausada
             if (document.pointerLockElement === document.body) {
                 if (keys.space && canSteal) {
                     canSteal = false; 
                     if (isHost) tryStealHost(camera.position, dir);
                     else hostConnection.send({ type: 'steal', x: camera.position.x, y: camera.position.y, z: camera.position.z, dirX: dir.x, dirZ: dir.z });
                 }
-
-                let moveZ = 0; let moveX = 0;
+                let moveZ = 0, moveX = 0;
                 if (keys.w) moveZ += 1; if (keys.s) moveZ -= 1;
                 if (keys.a) moveX -= 1; if (keys.d) moveX += 1;
-
                 let speed = 0.16;
                 if (keys.shift && (moveX||moveZ) && stamina > 0) { speed = 0.4; stamina -= 0.8; } else { stamina += 0.4; }
                 stamina = Math.max(0, Math.min(100, stamina));
                 document.getElementById('staminaBar').style.width = stamina + '%';
-
                 let moveVec = new THREE.Vector3();
                 if (moveZ) moveVec.addScaledVector(dir, moveZ); if (moveX) moveVec.addScaledVector(right, moveX); moveVec.normalize();
-                
                 camera.position.addScaledVector(moveVec, speed);
             }
-
             camera.position.x = Math.max(-fieldWidth/2+1, Math.min(fieldWidth/2-1, camera.position.x));
             camera.position.z = Math.max(-fieldLength/2+1, Math.min(fieldLength/2-1, camera.position.z));
             camera.position.y = 2;
-
             if (isHost) {
                 if (Math.hypot(camera.position.x - ball.position.x, camera.position.z - ball.position.z) < 2.5 && ball.position.y < 3) {
                     ballVelocity.x += (ball.position.x - camera.position.x) * 0.02; ballVelocity.z += (ball.position.z - camera.position.z) * 0.02;
@@ -432,13 +367,10 @@
                         ballVelocity.x += (ball.position.x - p.position.x) * 0.02; ballVelocity.z += (ball.position.z - p.position.z) * 0.02;
                     }
                 }
-
                 ballVelocity.y -= 0.02; ball.position.add(ballVelocity);
-
                 if (ball.position.y < ballRadius) { ball.position.y = ballRadius; ballVelocity.y *= -0.5; ballVelocity.x *= 0.96; ballVelocity.z *= 0.96; }
                 if (ball.position.x > fieldWidth/2 - ballRadius) { ball.position.x = fieldWidth/2 - ballRadius; ballVelocity.x *= -0.8; }
                 if (ball.position.x < -fieldWidth/2 + ballRadius) { ball.position.x = -fieldWidth/2 + ballRadius; ballVelocity.x *= -0.8; }
-                
                 if (ball.position.z > fieldLength/2 - ballRadius || ball.position.z < -fieldLength/2 + ballRadius) {
                     if (Math.abs(ball.position.x) < 7) {
                         if (ball.position.z > fieldLength/2) { placar1++; document.getElementById('score1').innerText = placar1; ball.position.set(0,5,0); ballVelocity.set(0,0,0); } 
@@ -449,15 +381,12 @@
                     }
                 }
             }
-
             if (Math.abs(ballVelocity.x) > 0.01 || Math.abs(ballVelocity.z) > 0.01) {
                 ball.rotation.x += (isHost ? ballVelocity.z : 0.1) * 0.5;
                 ball.rotation.z -= (isHost ? ballVelocity.x : 0.1) * 0.5;
             }
-
             renderer.render(scene, camera);
         }
-
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
