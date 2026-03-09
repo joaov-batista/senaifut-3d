@@ -437,12 +437,13 @@
             <b>CONTROLES</b><br><br>
             <b>W,A,S,D</b>: Andar / Conduzir<br>
             <b>SHIFT</b>: Correr<br>
-            <b>F</b>: Pular / Cabecear<br>
+            <b>ESPAÇO</b>: Pular / Cabecear<br>
             <b>C</b>: Carrinho<br>
             <b>Cliq. Esq.</b>: Chute forte direto<br>
-            <b>ESPAÇO</b>: Minigame de força do chute<br>
-            <b>Cliq. Dir.</b>: Matar a bola<br>
-            <b>E</b>: Embaixadinha
+            <b>Cliq. Dir.</b>: Cavadinha<br>
+            <b>R</b>: Passe automático<br>
+            <b>E</b>: Embaixadinha<br>
+            <b>F</b>: Chute Técnico (Força)
         </div>
 
         <div id="embaixadinhaUI">
@@ -458,7 +459,7 @@
 
         <div id="shotPowerUI">
             <div id="shotPowerTitle">CHUTE TÉCNICO</div>
-            <div id="shotPowerText">Aperte <b>ESPAÇO</b> de novo para travar a força.</div>
+            <div id="shotPowerText">Aperte <b>F</b> de novo para travar a força.</div>
             <div id="shotPowerBar">
                 <div id="shotPowerPerfect"></div>
                 <div id="shotPowerMarker"></div>
@@ -749,7 +750,6 @@
                     tex.magFilter = THREE.LinearFilter;
                     mesh.material = new THREE.MeshLambertMaterial({ map: tex, color: 0xffffff });
                     
-                    // Adiciona uma borda na cor do time pra ficar visível mesmo com textura
                     const edgeGeo = new THREE.EdgesGeometry(geo);
                     const edgeMat = new THREE.LineBasicMaterial({ color: teamColor, linewidth: 2 });
                     const edges = new THREE.LineSegments(edgeGeo, edgeMat);
@@ -778,7 +778,7 @@
         let sendPosInterval = null;
         let lastBroadcastAt = 0;
 
-        const keys = { w: false, a: false, s: false, d: false, shift: false, space: false, e: false, f: false, c: false };
+        const keys = { w: false, a: false, s: false, d: false, shift: false, space: false, e: false, f: false, c: false, r: false };
 
         let stamina = 100;
         let pitch = 0;
@@ -786,7 +786,6 @@
         let lastMoveSent = { x: 0, y: 0, z: 0, rotY: 0 };
         let pingMs = 0;
 
-        // Variáveis de Físicas novas
         let playerVy = 0;
         let isJumping = false;
         let isSliding = false;
@@ -794,7 +793,6 @@
         let isStunned = false;
         let stunTimer = 0;
 
-        // Variáveis de controle de Host (Carrinho)
         let slidingPlayers = {};
         let stunnedPlayers = {};
 
@@ -875,7 +873,7 @@
             shotPowerValue.textContent = `Força: ${Math.round(shotMini.meter * 100)}%`;
 
             if (shotMini.playerId === myInfo.id) {
-                shotPowerText.innerHTML = `Aperte <b>ESPAÇO</b> de novo para travar a força.`;
+                shotPowerText.innerHTML = `Aperte <b>F</b> de novo para travar a força.`;
             } else {
                 shotPowerText.innerHTML = `<b>${shotMini.playerName}</b> está preparando um chute.`;
             }
@@ -1158,6 +1156,40 @@
             }
         }
 
+        function executePassHost(playerId) {
+            cancelShotMiniHost();
+            if (juggle.active) endJuggle('fail');
+
+            const senderTeam = getPlayerTeamById(playerId);
+            let nearestAlly = null;
+            let minDistance = Infinity;
+
+            roomPlayers.forEach(p => {
+                if (p.id !== playerId && p.team === senderTeam) {
+                    const pos = getPlayerPositionById(p.id);
+                    if (pos) {
+                        const dist = pos.distanceTo(ball.position);
+                        if (dist < minDistance) {
+                            minDistance = dist;
+                            nearestAlly = p;
+                        }
+                    }
+                }
+            });
+
+            if (nearestAlly) {
+                const targetPos = getPlayerPositionById(nearestAlly.id);
+                const dir = new THREE.Vector3().subVectors(targetPos, ball.position).normalize();
+                
+                ballVelocity.copy(dir).multiplyScalar(14);
+                ballVelocity.y = 2.0; 
+                showGlobalEvent(`Lindo passe de ${getPlayerNameById(playerId)}!`, 1000);
+            } else {
+                const dir = playerId === myInfo.id ? getKickDirection() : getRemotePlayerDirection(playerId);
+                ballVelocity.copy(dir).multiplyScalar(8);
+            }
+        }
+
         function applyTouchImpulse(playerPos) {
             if (juggle.active || shotMini.active) return;
 
@@ -1165,11 +1197,10 @@
             const dist = Math.hypot(toBall.x, toBall.z);
             if (dist > 2.9 || dist < 0.001) return;
 
-            // Cabeçada: se o jogador está pulando e a bola está alta
             let pushForce = TOUCH_PUSH_FORCE;
             if (playerPos.y > 2.2 && ball.position.y > 1.8) {
-                pushForce *= 1.8; // Impulso mais forte da cabeçada
-                toBall.y = -0.5; // Joga a bola pra baixo
+                pushForce *= 1.8; 
+                toBall.y = -0.5; 
             } else {
                 toBall.y = 0;
             }
@@ -1229,6 +1260,20 @@
                         break;
                     }
 
+                    case 'cavadinha': {
+                        if (juggle.active) endJuggle('fail');
+                        cancelShotMiniHost();
+                        const dir = new THREE.Vector3(data.dirX, data.dirY, data.dirZ);
+                        ballVelocity.copy(dir).multiplyScalar(DIRECT_KICK_POWER * 0.5);
+                        ballVelocity.y = 12.0; // Puxou a bola pro alto
+                        break;
+                    }
+
+                    case 'passReq': {
+                        executePassHost(senderId);
+                        break;
+                    }
+
                     case 'stopBall': {
                         if (juggle.active) endJuggle('fail');
                         cancelShotMiniHost();
@@ -1261,12 +1306,11 @@
                     }
 
                     case 'startSlide': {
-                        slidingPlayers[senderId] = 0.8;
+                        slidingPlayers[senderId] = 0.35; // Tempo ajustado
                         break;
                     }
                 }
             } else {
-                // Client Side Receptions
                 switch (data.type) {
                     case 'lobbySync':
                         roomPlayers = data.players;
@@ -1466,23 +1510,25 @@
                 case 'KeyE': keys.e = pressed; break;
                 case 'KeyF': keys.f = pressed; break;
                 case 'KeyC': keys.c = pressed; break;
+                case 'KeyR': keys.r = pressed; break;
+                case 'Space': keys.space = pressed; break;
                 case 'ShiftLeft':
                 case 'ShiftRight':
                     keys.shift = pressed;
-                    break;
-                case 'Space':
-                    keys.space = pressed;
                     break;
             }
         }
 
         document.addEventListener('keydown', (e) => {
             const wasEPressed = keys.e;
-            const wasSpacePressed = keys.space;
+            const wasFPressed = keys.f;
+            const wasRPressed = keys.r;
+
             setKeyByCode(e.code, true);
 
             if (e.code === 'KeyE' && !wasEPressed) onPressE();
-            if (e.code === 'Space' && !wasSpacePressed) onPressSpace();
+            if (e.code === 'KeyF' && !wasFPressed) onPressF();
+            if (e.code === 'KeyR' && !wasRPressed) onPressR();
         });
 
         document.addEventListener('keyup', (e) => {
@@ -1509,7 +1555,7 @@
             else if (hostConnection && hostConnection.open) hostConnection.send({ type: 'startJuggleReq' });
         }
 
-        function onPressSpace() {
+        function onPressF() {
             if (!hasGameStarted) return;
             if (document.pointerLockElement !== document.body) return;
             if (juggle.active || isStunned) return;
@@ -1526,6 +1572,18 @@
                 if (isHost) startShotMiniHost(myInfo.id);
                 else if (hostConnection && hostConnection.open) hostConnection.send({ type: 'startShotMiniReq' });
             }
+        }
+
+        function onPressR() {
+            if (!hasGameStarted) return;
+            if (document.pointerLockElement !== document.body) return;
+            if (juggle.active || shotMini.active || isStunned) return;
+
+            const nearBall = camera.position.distanceTo(ball.position) <= 7.5;
+            if (!nearBall) return;
+
+            if (isHost) executePassHost(myInfo.id);
+            else if (hostConnection && hostConnection.open) hostConnection.send({ type: 'passReq' });
         }
 
         lockOverlay.addEventListener('mousedown', () => {
@@ -1551,7 +1609,6 @@
             camera.rotateY(yaw);
             camera.rotateX(pitch);
             
-            // Tilted camera se tiver em Stun
             if (isStunned) camera.rotateZ(Math.PI / 2);
         });
 
@@ -1564,6 +1621,7 @@
 
             const dir = getKickDirection();
 
+            // Chute Forte
             if (e.button === 0) {
                 if (juggle.active) {
                     if (isHost) endJuggle('fail');
@@ -1578,23 +1636,20 @@
                 if (isHost) {
                     ballVelocity.copy(dir).multiplyScalar(DIRECT_KICK_POWER);
                 } else if (hostConnection && hostConnection.open) {
-                    hostConnection.send({
-                        type: 'kick',
-                        dirX: dir.x,
-                        dirY: dir.y,
-                        dirZ: dir.z
-                    });
+                    hostConnection.send({ type: 'kick', dirX: dir.x, dirY: dir.y, dirZ: dir.z });
                 }
             }
 
+            // Cavadinha (Bola pro alto)
             if (e.button === 2) {
                 if (juggle.active && isHost) endJuggle('fail');
                 if (shotMini.active && isHost) cancelShotMiniHost();
 
                 if (isHost) {
-                    ballVelocity.set(0, 0, 0);
+                    ballVelocity.copy(dir).multiplyScalar(DIRECT_KICK_POWER * 0.5);
+                    ballVelocity.y = 12.0; // Puxou a bola pro alto
                 } else if (hostConnection && hostConnection.open) {
-                    hostConnection.send({ type: 'stopBall' });
+                    hostConnection.send({ type: 'cavadinha', dirX: dir.x, dirY: dir.y, dirZ: dir.z });
                 }
             }
         });
@@ -1641,11 +1696,10 @@
         }
 
         function updateLocalPlayer(dt) {
-            // Lógica do STUN
             if (isStunned) {
                 stunTimer -= dt;
                 stunOverlay.style.display = 'flex';
-                camera.position.y = 0.5; // Caiu no chão
+                camera.position.y = 0.5; 
                 camera.rotation.set(0, 0, 0);
                 camera.rotateY(yaw);
                 camera.rotateX(pitch);
@@ -1655,16 +1709,15 @@
                     stunOverlay.style.display = 'none';
                     camera.rotation.z = 0;
                 }
-                return; // Impede movimento
+                return; 
             }
 
-            // Lógica do Carrinho
             if (keys.c && !isSliding && stamina >= 20 && !isJumping) {
                 isSliding = true;
-                slideTimer = 0.7; // Duração do carrinho
+                slideTimer = 0.35; // Diminuído
                 stamina -= 20;
                 
-                if (isHost) slidingPlayers[myInfo.id] = 0.7;
+                if (isHost) slidingPlayers[myInfo.id] = 0.35;
                 else if (hostConnection && hostConnection.open) hostConnection.send({ type: 'startSlide' });
             }
 
@@ -1673,15 +1726,14 @@
                 if (slideTimer <= 0) isSliding = false;
             }
 
-            // Lógica do Pulo (F)
-            if (keys.f && !isJumping && !isSliding && stamina >= 10) {
+            if (keys.space && !isJumping && !isSliding && stamina >= 10) {
                 isJumping = true;
-                playerVy = 6.5; // Força do pulo
+                playerVy = 6.5; 
                 stamina -= 10;
             }
 
             if (isJumping) {
-                playerVy -= 16 * dt; // Gravidade do jogador
+                playerVy -= 16 * dt; 
                 camera.position.y += playerVy * dt;
                 if (camera.position.y <= 2.0) {
                     camera.position.y = 2.0;
@@ -1712,10 +1764,10 @@
                 const moving = moveX !== 0 || moveZ !== 0;
 
                 if (isSliding) {
-                    speed = 26; // Carrinho muito rápido
-                    moveZ = 1; // Força ir pra frente
+                    speed = 26; 
+                    moveZ = 1; 
                     moveX = 0;
-                    camera.position.y = 0.8; // Câmera baixa
+                    camera.position.y = 0.8; 
                 } else if (keys.shift && moving && stamina > 0) {
                     speed = 15.5;
                     stamina -= 30 * dt;
@@ -1748,7 +1800,6 @@
                 remote.mesh.position.lerp(remote.targetPos, lerpFactor);
                 remote.mesh.rotation.y += (remote.targetRotY - remote.mesh.rotation.y) * lerpFactor;
                 
-                // Animação de stun em jogadores remotos
                 if (remote.isStunned) {
                     remote.mesh.rotation.z = Math.PI / 2;
                     remote.mesh.position.y = 0.5;
@@ -1759,7 +1810,6 @@
         }
 
         function updateHostPhysicsAndBall(dt) {
-            // Lógica de Colisão do Carrinho (Apenas Host Calcula)
             for (let id in slidingPlayers) {
                 slidingPlayers[id] -= dt;
                 if (slidingPlayers[id] <= 0) {
@@ -1770,20 +1820,17 @@
                 const pPos = getPlayerPositionById(id);
                 const pTeam = getPlayerTeamById(id);
 
-                // Colisão do carrinho com a bola
                 if (pPos.distanceTo(ball.position) < 3.5) {
                     const toBall = new THREE.Vector3().subVectors(ball.position, pPos).normalize();
-                    toBall.y = 0.2; // Espirra a bola pra cima
+                    toBall.y = 0.2; 
                     ballVelocity.add(toBall.multiplyScalar(20 * dt)); 
                 }
 
-                // Colisão do carrinho com outros jogadores (Derrubar)
                 for (let other of roomPlayers) {
                     if (other.id !== id && !stunnedPlayers[other.id]) {
                         const oPos = getPlayerPositionById(other.id);
                         if (oPos && pPos.distanceTo(oPos) < 2.5 && other.team !== pTeam) {
-                            // Derrubou!
-                            stunnedPlayers[other.id] = 5.0; // 5 segundos no host
+                            stunnedPlayers[other.id] = 5.0; 
                             if (other.id === myInfo.id) {
                                 isStunned = true;
                                 stunTimer = 5.0;
@@ -1798,7 +1845,6 @@
                 }
             }
 
-            // Gerencia tempo de stun no Host
             for (let id in stunnedPlayers) {
                 stunnedPlayers[id] -= dt;
                 if (stunnedPlayers[id] <= 0) delete stunnedPlayers[id];
@@ -1807,7 +1853,6 @@
             if (juggle.active) {
                 const p = getPlayerPositionById(juggle.playerId);
                 if (p) {
-                    // Deixado mais fluído e devagar (fórmula matemática suavizada)
                     juggle.bounceTime += dt * (5.5 + juggle.count * 0.12);
 
                     const baseWave = Math.sin(juggle.bounceTime * 4.5);
@@ -1832,10 +1877,9 @@
                 applyTouchImpulse(networkMeshes[id].mesh.position);
             }
 
-            ballVelocity.y -= 16 * dt; // Gravidade da bola
+            ballVelocity.y -= 16 * dt; 
             ball.position.addScaledVector(ballVelocity, dt * 10);
 
-            // Quique no chão
             if (ball.position.y < ballRadius) {
                 ball.position.y = ballRadius;
                 ballVelocity.y *= -0.42;
@@ -1843,7 +1887,6 @@
                 ballVelocity.z *= 0.972;
             }
 
-            // Colisões nas Paredes
             if (ball.position.x > fieldWidth / 2 - ballRadius) {
                 ball.position.x = fieldWidth / 2 - ballRadius;
                 ballVelocity.x *= -0.82;
@@ -1854,16 +1897,15 @@
                 ballVelocity.x *= -0.82;
             }
 
-            // Gol
             if (ball.position.z > fieldLength / 2 - ballRadius || ball.position.z < -fieldLength / 2 + ballRadius) {
-                if (Math.abs(ball.position.x) < 7) { // Tamanho do Gol
+                if (Math.abs(ball.position.x) < 7) { 
                     if (ball.position.z > fieldLength / 2) {
-                        placar1++; // Gol do Azul
+                        placar1++; 
                         document.getElementById('score1').innerText = placar1;
                         resetBallCenter();
                         showGlobalEvent('GOOOOL DA EQUIPE AZUL!');
                     } else if (ball.position.z < -fieldLength / 2) {
-                        placar2++; // Gol do Verde
+                        placar2++; 
                         document.getElementById('score2').innerText = placar2;
                         resetBallCenter();
                         showGlobalEvent('GOOOOL DA EQUIPE VERDE!');
