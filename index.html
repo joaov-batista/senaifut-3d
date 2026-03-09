@@ -182,13 +182,14 @@
         #playerList li:last-child { border-bottom: none; }
 
         .player-name { font-weight: bold; font-size: 16px; }
-        .player-char {
+        .player-team {
             font-size: 12px;
-            color: #94a3b8;
-            background: #1e293b;
             padding: 4px 8px;
             border-radius: 4px;
+            font-weight: bold;
         }
+        .team-blue { background: rgba(59, 130, 246, 0.2); color: #93c5fd; border: 1px solid #3b82f6; }
+        .team-green { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid #10b981; }
 
         #crosshair {
             position: absolute;
@@ -215,6 +216,9 @@
             pointer-events: none;
             z-index: 15;
         }
+
+        .score-blue { color: #60a5fa; }
+        .score-green { color: #34d399; }
 
         #staminaContainer {
             position: absolute;
@@ -298,13 +302,8 @@
             border-radius: 999px;
         }
 
-        #embaixadinhaZone {
-            background: linear-gradient(90deg, #22c55e, #84cc16);
-        }
-
-        #shotPowerPerfect {
-            background: linear-gradient(90deg, #f59e0b, #facc15);
-        }
+        #embaixadinhaZone { background: linear-gradient(90deg, #22c55e, #84cc16); }
+        #shotPowerPerfect { background: linear-gradient(90deg, #f59e0b, #facc15); }
 
         #embaixadinhaMarker, #shotPowerMarker {
             position: absolute;
@@ -355,6 +354,21 @@
             border-radius: 8px;
             pointer-events: none;
         }
+        
+        #stunOverlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(220, 38, 38, 0.3);
+            display: none;
+            z-index: 14;
+            pointer-events: none;
+            justify-content: center;
+            align-items: center;
+            font-size: 40px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 2px 2px 10px red;
+        }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
@@ -364,6 +378,12 @@
         <div class="panel">
             <h1>SENAIFUT</h1>
             <input type="text" id="playerName" placeholder="Seu Nome" maxlength="12" />
+            
+            <select id="playerTeam">
+                <option value="blue">Equipe Azul</option>
+                <option value="green">Equipe Verde</option>
+            </select>
+
             <select id="playerChar">
                 <option value="brisa.png">Brisa</option>
                 <option value="edson.png">Edson</option>
@@ -409,13 +429,16 @@
         </div>
 
         <div id="crosshair">✛</div>
-        <div id="placar"><span id="score1">0</span> - <span id="score2">0</span></div>
+        <div id="placar"><span id="score1" class="score-blue">0</span> - <span id="score2" class="score-green">0</span></div>
         <div id="globalEventText"></div>
+        <div id="stunOverlay">DERRUBADO!</div>
 
         <div id="instructions">
             <b>CONTROLES</b><br><br>
             <b>W,A,S,D</b>: Andar / Conduzir<br>
             <b>SHIFT</b>: Correr<br>
+            <b>F</b>: Pular / Cabecear<br>
+            <b>C</b>: Carrinho<br>
             <b>Cliq. Esq.</b>: Chute forte direto<br>
             <b>ESPAÇO</b>: Minigame de força do chute<br>
             <b>Cliq. Dir.</b>: Matar a bola<br>
@@ -464,7 +487,7 @@
         let hostConnection = null;
         let hasGameStarted = false;
 
-        let myInfo = { id: '', name: '', char: '' };
+        let myInfo = { id: '', name: '', char: '', team: '' };
         let roomPlayers = [];
 
         const uiMenu = document.getElementById('mainMenuUI');
@@ -473,6 +496,7 @@
         const statusTxt = document.getElementById('statusText');
         const lockOverlay = document.getElementById('lockOverlay');
         const netStats = document.getElementById('netStats');
+        const stunOverlay = document.getElementById('stunOverlay');
 
         function updatePlayerListUI() {
             const list = document.getElementById('playerList');
@@ -480,11 +504,17 @@
 
             roomPlayers.forEach((p) => {
                 const li = document.createElement('li');
+                const teamClass = p.team === 'blue' ? 'team-blue' : 'team-green';
+                const teamName = p.team === 'blue' ? 'AZUL' : 'VERDE';
+                
                 li.innerHTML = `
                     <span class="player-name">
                         ${p.name} ${p.id === myInfo.id ? '(Você)' : ''} ${p.isHost ? '👑' : ''}
                     </span>
-                    <span class="player-char">${p.char.replace('.png', '')}</span>
+                    <div>
+                        <span class="player-team ${teamClass}">${teamName}</span>
+                        <span class="player-char">${p.char.replace('.png', '')}</span>
+                    </div>
                 `;
                 list.appendChild(li);
             });
@@ -506,6 +536,7 @@
 
             myInfo.name = (document.getElementById('playerName').value || 'Host').trim().slice(0, 12);
             myInfo.char = document.getElementById('playerChar').value;
+            myInfo.team = document.getElementById('playerTeam').value;
 
             const code = generateCode();
             showStatus('Criando sala...');
@@ -546,6 +577,9 @@
 
                     if (juggle.active && juggle.playerId === conn.peer) endJuggle('disconnect');
                     if (shotMini.active && shotMini.playerId === conn.peer) cancelShotMiniHost();
+                    
+                    if (slidingPlayers[conn.peer]) delete slidingPlayers[conn.peer];
+                    if (stunnedPlayers[conn.peer]) delete stunnedPlayers[conn.peer];
 
                     updatePlayerListUI();
                     if (!hasGameStarted) broadcast({ type: 'lobbySync', players: roomPlayers });
@@ -565,6 +599,7 @@
 
             myInfo.name = (document.getElementById('playerName').value || 'Visitante').trim().slice(0, 12);
             myInfo.char = document.getElementById('playerChar').value;
+            myInfo.team = document.getElementById('playerTeam').value;
 
             const code = document.getElementById('joinCode').value.trim();
             if (code.length !== 6) {
@@ -678,15 +713,15 @@
         circle.position.y = 0.05;
         worldGroup.add(circle);
 
-        function createGoal(zPos) {
-            const goalMat = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true });
+        function createGoal(zPos, colorHex) {
+            const goalMat = new THREE.MeshBasicMaterial({ color: colorHex, wireframe: true });
             const goal = new THREE.Mesh(new THREE.BoxGeometry(14, 4, 4), goalMat);
             goal.position.set(0, 2, zPos);
             worldGroup.add(goal);
         }
 
-        createGoal(-fieldLength / 2);
-        createGoal(fieldLength / 2);
+        createGoal(-fieldLength / 2, 0x3b82f6); // Gol Azul
+        createGoal(fieldLength / 2, 0x10b981); // Gol Verde
 
         const ball = new THREE.Mesh(
             new THREE.SphereGeometry(ballRadius, 18, 18),
@@ -697,20 +732,28 @@
         let ballVelocity = new THREE.Vector3(0, 0, 0);
 
         function createPlayerMesh(playerInfo) {
+            const teamColor = playerInfo.team === 'blue' ? 0x3b82f6 : 0x10b981;
             const geo = new THREE.BoxGeometry(1.5, 3, 1.5);
-            const mat = new THREE.MeshLambertMaterial({ color: 0x9ca3af });
+            const mat = new THREE.MeshLambertMaterial({ color: teamColor });
             const mesh = new THREE.Mesh(geo, mat);
 
             mesh.position.set(0, -100, 0);
             mesh.userData.playerId = playerInfo.id;
             mesh.userData.playerName = playerInfo.name;
+            mesh.userData.team = playerInfo.team;
 
             textureLoader.load(
                 playerInfo.char,
                 (tex) => {
                     tex.minFilter = THREE.LinearFilter;
                     tex.magFilter = THREE.LinearFilter;
-                    mesh.material = new THREE.MeshLambertMaterial({ map: tex });
+                    mesh.material = new THREE.MeshLambertMaterial({ map: tex, color: 0xffffff });
+                    
+                    // Adiciona uma borda na cor do time pra ficar visível mesmo com textura
+                    const edgeGeo = new THREE.EdgesGeometry(geo);
+                    const edgeMat = new THREE.LineBasicMaterial({ color: teamColor, linewidth: 2 });
+                    const edges = new THREE.LineSegments(edgeGeo, edgeMat);
+                    mesh.add(edges);
                 },
                 undefined,
                 () => {}
@@ -722,33 +765,38 @@
                 mesh,
                 info: playerInfo,
                 targetPos: new THREE.Vector3(0, -100, 0),
-                targetRotY: 0
+                targetRotY: 0,
+                isStunned: false
             };
         }
 
-        let placar1 = 0;
-        let placar2 = 0;
+        let placar1 = 0; // Azul
+        let placar2 = 0; // Verde
         let networkMeshes = {};
 
         let gameStateInterval = null;
         let sendPosInterval = null;
         let lastBroadcastAt = 0;
 
-        const keys = {
-            w: false,
-            a: false,
-            s: false,
-            d: false,
-            shift: false,
-            space: false,
-            e: false
-        };
+        const keys = { w: false, a: false, s: false, d: false, shift: false, space: false, e: false, f: false, c: false };
 
         let stamina = 100;
         let pitch = 0;
         let yaw = 0;
         let lastMoveSent = { x: 0, y: 0, z: 0, rotY: 0 };
         let pingMs = 0;
+
+        // Variáveis de Físicas novas
+        let playerVy = 0;
+        let isJumping = false;
+        let isSliding = false;
+        let slideTimer = 0;
+        let isStunned = false;
+        let stunTimer = 0;
+
+        // Variáveis de controle de Host (Carrinho)
+        let slidingPlayers = {};
+        let stunnedPlayers = {};
 
         const globalEventText = document.getElementById('globalEventText');
 
@@ -975,6 +1023,12 @@
             return p ? p.name : 'Jogador';
         }
 
+        function getPlayerTeamById(id) {
+            if (id === myInfo.id) return myInfo.team;
+            const p = roomPlayers.find(p => p.id === id);
+            return p ? p.team : '';
+        }
+
         function getPlayerPositionById(id) {
             if (id === myInfo.id) return camera.position.clone();
             if (networkMeshes[id]) return networkMeshes[id].mesh.position.clone();
@@ -1091,8 +1145,8 @@
                 juggle.timeout = juggle.failGrace;
                 juggle.bounceTime = 0;
 
-                juggle.speed = clamp(juggle.speed + 0.07, 0.95, 2.35);
-                juggle.zoneSize = clamp(juggle.zoneSize - 0.012, 0.09, 0.28);
+                juggle.speed = clamp(juggle.speed + 0.05, 0.95, 2.0);
+                juggle.zoneSize = clamp(juggle.zoneSize - 0.010, 0.12, 0.28);
 
                 const center = clamp(juggle.meter + (Math.random() * 0.28 - 0.14), 0.10, 0.90);
                 juggle.zoneStart = clamp(center - juggle.zoneSize / 2, 0.02, 0.98 - juggle.zoneSize);
@@ -1111,12 +1165,21 @@
             const dist = Math.hypot(toBall.x, toBall.z);
             if (dist > 2.9 || dist < 0.001) return;
 
-            toBall.y = 0;
+            // Cabeçada: se o jogador está pulando e a bola está alta
+            let pushForce = TOUCH_PUSH_FORCE;
+            if (playerPos.y > 2.2 && ball.position.y > 1.8) {
+                pushForce *= 1.8; // Impulso mais forte da cabeçada
+                toBall.y = -0.5; // Joga a bola pra baixo
+            } else {
+                toBall.y = 0;
+            }
+            
             toBall.normalize();
 
-            const push = (1 - dist / 2.9) * TOUCH_PUSH_FORCE;
+            const push = (1 - dist / 2.9) * pushForce;
             ballVelocity.x += toBall.x * push;
             ballVelocity.z += toBall.z * push;
+            if (toBall.y !== 0) ballVelocity.y += toBall.y * push * 2;
         }
 
         function handleNetworkData(senderId, data) {
@@ -1196,8 +1259,14 @@
                         finishShotMiniHost(senderId);
                         break;
                     }
+
+                    case 'startSlide': {
+                        slidingPlayers[senderId] = 0.8;
+                        break;
+                    }
                 }
             } else {
+                // Client Side Receptions
                 switch (data.type) {
                     case 'lobbySync':
                         roomPlayers = data.players;
@@ -1218,6 +1287,16 @@
 
                     case 'shotMiniState':
                         handleShotMiniClient(data.shotMini);
+                        break;
+                    
+                    case 'stunCmd':
+                        if (data.targetId === myInfo.id) {
+                            isStunned = true;
+                            stunTimer = 5.0;
+                            isSliding = false;
+                            isJumping = false;
+                            showGlobalEvent('VOCÊ FOI DERRUBADO!', 2000);
+                        }
                         break;
                 }
             }
@@ -1247,6 +1326,7 @@
                 if (networkMeshes[id]) {
                     networkMeshes[id].targetPos.set(posData.x, posData.y, posData.z);
                     networkMeshes[id].targetRotY = posData.rotY;
+                    networkMeshes[id].isStunned = posData.isStunned;
                 }
             }
         }
@@ -1268,11 +1348,12 @@
                 document.body.appendChild(renderer.domElement);
             }
 
-            const myStartZ = isHost ? 28 : -28;
+            const isBlue = myInfo.team === 'blue';
+            const myStartZ = isBlue ? 28 : -28; 
             const myStartX = (Math.random() - 0.5) * 18;
 
             camera.position.set(myStartX, 2, myStartZ);
-            yaw = isHost ? Math.PI : 0;
+            yaw = isBlue ? Math.PI : 0;
             pitch = 0;
             camera.rotation.set(0, 0, 0);
             camera.rotateY(yaw);
@@ -1305,7 +1386,8 @@
                 x: camera.position.x,
                 y: camera.position.y,
                 z: camera.position.z,
-                rotY: yaw
+                rotY: yaw,
+                isStunned: isStunned
             };
 
             for (const id in networkMeshes) {
@@ -1314,7 +1396,8 @@
                     x: p.position.x,
                     y: p.position.y,
                     z: p.position.z,
-                    rotY: p.rotation.y
+                    rotY: p.rotation.y,
+                    isStunned: stunnedPlayers[id] > 0
                 };
             }
 
@@ -1381,6 +1464,8 @@
                 case 'KeyS': keys.s = pressed; break;
                 case 'KeyD': keys.d = pressed; break;
                 case 'KeyE': keys.e = pressed; break;
+                case 'KeyF': keys.f = pressed; break;
+                case 'KeyC': keys.c = pressed; break;
                 case 'ShiftLeft':
                 case 'ShiftRight':
                     keys.shift = pressed;
@@ -1407,7 +1492,7 @@
         function onPressE() {
             if (!hasGameStarted) return;
             if (document.pointerLockElement !== document.body) return;
-            if (shotMini.active) return;
+            if (shotMini.active || isStunned) return;
 
             if (juggle.active) {
                 if (juggle.playerId === myInfo.id) {
@@ -1427,7 +1512,7 @@
         function onPressSpace() {
             if (!hasGameStarted) return;
             if (document.pointerLockElement !== document.body) return;
-            if (juggle.active) return;
+            if (juggle.active || isStunned) return;
 
             const nearBall = camera.position.distanceTo(ball.position) <= 6.0;
             if (!nearBall) return;
@@ -1465,11 +1550,14 @@
             camera.rotation.set(0, 0, 0);
             camera.rotateY(yaw);
             camera.rotateX(pitch);
+            
+            // Tilted camera se tiver em Stun
+            if (isStunned) camera.rotateZ(Math.PI / 2);
         });
 
         document.addEventListener('mousedown', (e) => {
             if (document.pointerLockElement !== document.body) return;
-            if (!hasGameStarted) return;
+            if (!hasGameStarted || isStunned) return;
 
             const nearBall = camera.position.distanceTo(ball.position) <= 7.5;
             if (!nearBall) return;
@@ -1535,7 +1623,7 @@
                 updateRemotePlayers(dt);
 
                 if (isHost) {
-                    updateHostBall(dt);
+                    updateHostPhysicsAndBall(dt);
                     updateJuggleHost(dt);
                     updateShotMiniHost(dt);
                 }
@@ -1553,6 +1641,57 @@
         }
 
         function updateLocalPlayer(dt) {
+            // Lógica do STUN
+            if (isStunned) {
+                stunTimer -= dt;
+                stunOverlay.style.display = 'flex';
+                camera.position.y = 0.5; // Caiu no chão
+                camera.rotation.set(0, 0, 0);
+                camera.rotateY(yaw);
+                camera.rotateX(pitch);
+                camera.rotateZ(Math.PI / 2);
+                if (stunTimer <= 0) {
+                    isStunned = false;
+                    stunOverlay.style.display = 'none';
+                    camera.rotation.z = 0;
+                }
+                return; // Impede movimento
+            }
+
+            // Lógica do Carrinho
+            if (keys.c && !isSliding && stamina >= 20 && !isJumping) {
+                isSliding = true;
+                slideTimer = 0.7; // Duração do carrinho
+                stamina -= 20;
+                
+                if (isHost) slidingPlayers[myInfo.id] = 0.7;
+                else if (hostConnection && hostConnection.open) hostConnection.send({ type: 'startSlide' });
+            }
+
+            if (isSliding) {
+                slideTimer -= dt;
+                if (slideTimer <= 0) isSliding = false;
+            }
+
+            // Lógica do Pulo (F)
+            if (keys.f && !isJumping && !isSliding && stamina >= 10) {
+                isJumping = true;
+                playerVy = 6.5; // Força do pulo
+                stamina -= 10;
+            }
+
+            if (isJumping) {
+                playerVy -= 16 * dt; // Gravidade do jogador
+                camera.position.y += playerVy * dt;
+                if (camera.position.y <= 2.0) {
+                    camera.position.y = 2.0;
+                    playerVy = 0;
+                    isJumping = false;
+                }
+            } else if (!isSliding) {
+                camera.position.y = 2.0;
+            }
+
             const dir = new THREE.Vector3();
             camera.getWorldDirection(dir);
             dir.y = 0;
@@ -1572,9 +1711,14 @@
                 let speed = 8.2;
                 const moving = moveX !== 0 || moveZ !== 0;
 
-                if (keys.shift && moving && stamina > 0) {
+                if (isSliding) {
+                    speed = 26; // Carrinho muito rápido
+                    moveZ = 1; // Força ir pra frente
+                    moveX = 0;
+                    camera.position.y = 0.8; // Câmera baixa
+                } else if (keys.shift && moving && stamina > 0) {
                     speed = 15.5;
-                    stamina -= 42 * dt;
+                    stamina -= 30 * dt;
                 } else {
                     stamina += 22 * dt;
                 }
@@ -1594,7 +1738,6 @@
 
             camera.position.x = clamp(camera.position.x, -fieldWidth / 2 + 1, fieldWidth / 2 - 1);
             camera.position.z = clamp(camera.position.z, -fieldLength / 2 + 1, fieldLength / 2 - 1);
-            camera.position.y = 2;
         }
 
         function updateRemotePlayers(dt) {
@@ -1604,23 +1747,77 @@
                 const remote = networkMeshes[id];
                 remote.mesh.position.lerp(remote.targetPos, lerpFactor);
                 remote.mesh.rotation.y += (remote.targetRotY - remote.mesh.rotation.y) * lerpFactor;
+                
+                // Animação de stun em jogadores remotos
+                if (remote.isStunned) {
+                    remote.mesh.rotation.z = Math.PI / 2;
+                    remote.mesh.position.y = 0.5;
+                } else {
+                    remote.mesh.rotation.z = 0;
+                }
             }
         }
 
-        function updateHostBall(dt) {
+        function updateHostPhysicsAndBall(dt) {
+            // Lógica de Colisão do Carrinho (Apenas Host Calcula)
+            for (let id in slidingPlayers) {
+                slidingPlayers[id] -= dt;
+                if (slidingPlayers[id] <= 0) {
+                    delete slidingPlayers[id];
+                    continue;
+                }
+
+                const pPos = getPlayerPositionById(id);
+                const pTeam = getPlayerTeamById(id);
+
+                // Colisão do carrinho com a bola
+                if (pPos.distanceTo(ball.position) < 3.5) {
+                    const toBall = new THREE.Vector3().subVectors(ball.position, pPos).normalize();
+                    toBall.y = 0.2; // Espirra a bola pra cima
+                    ballVelocity.add(toBall.multiplyScalar(20 * dt)); 
+                }
+
+                // Colisão do carrinho com outros jogadores (Derrubar)
+                for (let other of roomPlayers) {
+                    if (other.id !== id && !stunnedPlayers[other.id]) {
+                        const oPos = getPlayerPositionById(other.id);
+                        if (oPos && pPos.distanceTo(oPos) < 2.5 && other.team !== pTeam) {
+                            // Derrubou!
+                            stunnedPlayers[other.id] = 5.0; // 5 segundos no host
+                            if (other.id === myInfo.id) {
+                                isStunned = true;
+                                stunTimer = 5.0;
+                                showGlobalEvent('VOCÊ FOI DERRUBADO!', 2000);
+                            } else {
+                                const conn = connections[other.id];
+                                if (conn && conn.open) conn.send({ type: 'stunCmd', targetId: other.id });
+                                showGlobalEvent(`${other.name} tomou um carrinho de ${getPlayerNameById(id)}!`, 2000);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Gerencia tempo de stun no Host
+            for (let id in stunnedPlayers) {
+                stunnedPlayers[id] -= dt;
+                if (stunnedPlayers[id] <= 0) delete stunnedPlayers[id];
+            }
+
             if (juggle.active) {
                 const p = getPlayerPositionById(juggle.playerId);
                 if (p) {
-                    juggle.bounceTime += dt * (8 + juggle.count * 0.18);
+                    // Deixado mais fluído e devagar (fórmula matemática suavizada)
+                    juggle.bounceTime += dt * (5.5 + juggle.count * 0.12);
 
-                    const baseWave = Math.sin(juggle.bounceTime * 6.5);
-                    const secondWave = Math.sin(juggle.bounceTime * 13.0) * 0.22;
+                    const baseWave = Math.sin(juggle.bounceTime * 4.5);
+                    const secondWave = Math.sin(juggle.bounceTime * 9.0) * 0.15;
                     const smoothBounce = Math.abs(baseWave + secondWave) * juggle.bounceAmplitude;
                     const desiredY = ballRadius + juggle.baseHeight + smoothBounce;
 
-                    ball.position.x += (p.x - ball.position.x) * Math.min(1, 16 * dt);
-                    ball.position.z += (p.z - ball.position.z) * Math.min(1, 16 * dt);
-                    ball.position.y += (desiredY - ball.position.y) * Math.min(1, 18 * dt);
+                    ball.position.x += (p.x - ball.position.x) * Math.min(1, 12 * dt);
+                    ball.position.z += (p.z - ball.position.z) * Math.min(1, 12 * dt);
+                    ball.position.y += (desiredY - ball.position.y) * Math.min(1, 15 * dt);
 
                     ballVelocity.set(0, 0, 0);
                 } else {
@@ -1635,9 +1832,10 @@
                 applyTouchImpulse(networkMeshes[id].mesh.position);
             }
 
-            ballVelocity.y -= 16 * dt;
+            ballVelocity.y -= 16 * dt; // Gravidade da bola
             ball.position.addScaledVector(ballVelocity, dt * 10);
 
+            // Quique no chão
             if (ball.position.y < ballRadius) {
                 ball.position.y = ballRadius;
                 ballVelocity.y *= -0.42;
@@ -1645,6 +1843,7 @@
                 ballVelocity.z *= 0.972;
             }
 
+            // Colisões nas Paredes
             if (ball.position.x > fieldWidth / 2 - ballRadius) {
                 ball.position.x = fieldWidth / 2 - ballRadius;
                 ballVelocity.x *= -0.82;
@@ -1655,18 +1854,19 @@
                 ballVelocity.x *= -0.82;
             }
 
+            // Gol
             if (ball.position.z > fieldLength / 2 - ballRadius || ball.position.z < -fieldLength / 2 + ballRadius) {
-                if (Math.abs(ball.position.x) < 7) {
+                if (Math.abs(ball.position.x) < 7) { // Tamanho do Gol
                     if (ball.position.z > fieldLength / 2) {
-                        placar1++;
+                        placar1++; // Gol do Azul
                         document.getElementById('score1').innerText = placar1;
                         resetBallCenter();
-                        showGlobalEvent('GOOOOL!');
+                        showGlobalEvent('GOOOOL DA EQUIPE AZUL!');
                     } else if (ball.position.z < -fieldLength / 2) {
-                        placar2++;
+                        placar2++; // Gol do Verde
                         document.getElementById('score2').innerText = placar2;
                         resetBallCenter();
-                        showGlobalEvent('GOOOOL!');
+                        showGlobalEvent('GOOOOL DA EQUIPE VERDE!');
                     }
                 } else {
                     if (ball.position.z > fieldLength / 2 - ballRadius) {
@@ -1709,9 +1909,9 @@
 
         function updateBallSpin(dt) {
             if (juggle.active) {
-                ball.rotation.x += dt * 9.2;
-                ball.rotation.z += dt * 3.8;
-                ball.rotation.y += dt * 2.6;
+                ball.rotation.x += dt * 7.2;
+                ball.rotation.z += dt * 2.8;
+                ball.rotation.y += dt * 1.6;
                 return;
             }
 
