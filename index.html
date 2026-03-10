@@ -3,31 +3,40 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SENAIFUT 3D - MULTIPLAYER</title>
+    <title>SENAIFUT 3D - MULTIPLAYER ARCADE</title>
     <style>
         :root {
             --green: #10b981;
             --blue: #3b82f6;
             --bg: #0f172a;
-            --panel: rgba(0, 0, 0, 0.6);
+            --panel: rgba(15, 23, 42, 0.85);
             --text-soft: #cbd5e1;
             --border: rgba(255,255,255,0.1);
             --gold: #facc15;
         }
-
         * { box-sizing: border-box; }
-
         body {
             margin: 0;
             overflow: hidden;
-            background: var(--bg);
+            background-color: var(--bg);
+            background-image: url('fundo.png');
+            background-size: cover;
+            background-position: center;
             font-family: 'Segoe UI', Tahoma, sans-serif;
             user-select: none;
             color: white;
         }
 
-        canvas { display: block; }
+        #mainMenuUI::before, #waitingRoomUI::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            z-index: -1;
+        }
 
+        canvas { display: block; position: absolute; z-index: 1; }
         #mainMenuUI, #waitingRoomUI, #gameUI {
             position: absolute;
             inset: 0;
@@ -35,78 +44,143 @@
             height: 100vh;
             z-index: 10;
         }
-
         #waitingRoomUI, #gameUI { display: none; }
 
         #lockOverlay {
             position: absolute;
             inset: 0;
-            background: rgba(0, 0, 0, 0.72);
+            background: rgba(0, 0, 0, 0.8);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             z-index: 50;
             cursor: pointer;
+            backdrop-filter: blur(4px);
         }
-
         #lockOverlay h2 {
             color: var(--green);
-            font-size: 40px;
+            font-size: 45px;
             text-transform: uppercase;
-            text-shadow: 0 0 20px var(--green);
+            text-shadow: 0 0 30px var(--green);
             margin: 0;
         }
 
-        #lockOverlay p {
+        #stunOverlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(220, 38, 38, 0.4);
+            display: none;
+            z-index: 14;
+            pointer-events: none;
+            justify-content: center;
+            align-items: center;
+            font-size: 50px;
+            font-weight: bold;
             color: white;
-            font-size: 18px;
-            margin-top: 10px;
+            text-shadow: 2px 2px 10px black;
+            text-transform: uppercase;
+            flex-direction: column;
+            transition: background 0.3s;
+        }
+        #redCardTimer { font-size: 80px; color: white; margin-top: 20px; }
+
+        #refStatus {
+            position: absolute;
+            top: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 24px;
+            font-weight: 900;
+            background: rgba(0,0,0,0.85);
+            padding: 10px 30px;
+            border-radius: 8px;
+            border: 3px solid red;
+            color: red;
+            text-transform: uppercase;
+            z-index: 15;
+            display: none;
+            box-shadow: 0 0 20px red;
+            animation: blink 1s infinite;
+            letter-spacing: 2px;
+        }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+        #globalEventText {
+            position: absolute;
+            top: 170px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.85);
+            border: 2px solid rgba(255,255,255,0.2);
+            border-radius: 10px;
+            padding: 14px 24px;
+            z-index: 16;
+            font-weight: 900;
+            font-size: 24px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            display: none;
+            text-align: center;
+            text-shadow: 0 0 10px currentColor;
         }
 
         .menu-container {
-            background: radial-gradient(circle at top, #1e293b 0%, #0f172a 100%);
             display: flex;
             align-items: center;
             justify-content: center;
+            overflow-y: auto;
+            padding: 20px;
         }
-
         .panel {
             background: var(--panel);
-            padding: 40px;
-            border-radius: 16px;
-            text-align: center;
+            border-radius: 20px;
             border: 1px solid var(--border);
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
-            width: min(92vw, 420px);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+            width: min(95vw, 1000px);
+            display: flex;
+            overflow: hidden;
         }
-
-        #waitingRoomUI .panel { width: min(92vw, 540px); }
+        .panel-left { padding: 40px; flex: 1; border-right: 1px solid rgba(255,255,255,0.05); }
+        .panel-right { padding: 40px; flex: 1.5; background: rgba(0,0,0,0.3); }
 
         h1 {
             color: var(--green);
-            font-size: 3em;
+            font-size: 2.5em;
             font-style: italic;
             text-transform: uppercase;
             letter-spacing: 2px;
-            text-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
-            margin-bottom: 30px;
+            margin-bottom: 20px;
+            margin-top: 0;
+        }
+        h2.title-sec {
+            font-size: 16px;
+            color: var(--gold);
+            margin-top: 0;
+            text-transform: uppercase;
+            border-bottom: 2px solid rgba(255,255,255,0.1);
+            padding-bottom: 10px;
         }
 
         input, select {
-            width: 90%;
+            width: 100%;
             padding: 14px;
-            margin: 10px 0;
+            margin: 8px 0 15px 0;
             border-radius: 8px;
             border: 1px solid #334155;
             font-size: 16px;
             background: #1e293b;
             color: white;
             outline: none;
+            transition: 0.2s;
+        }
+        input:focus, select:focus {
+            border-color: var(--green);
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
         }
 
         button {
-            width: 96%;
+            width: 100%;
             padding: 15px;
             margin: 10px 0;
             border-radius: 8px;
@@ -117,77 +191,86 @@
             transition: 0.15s;
             text-transform: uppercase;
         }
+        .btn-host { background: var(--green); color: white; box-shadow: 0 4px 0 #059669; }
+        .btn-join { background: var(--blue); color: white; box-shadow: 0 4px 0 #2563eb; }
 
-        .btn-host {
-            background: var(--green);
-            color: white;
-            box-shadow: 0 4px 0 #059669;
+        .char-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px; }
+        .char-card {
+            background: #1e293b;
+            border: 2px solid #334155;
+            border-radius: 8px;
+            padding: 12px 8px;
+            cursor: pointer;
+            transition: 0.2s;
+            position: relative;
+            text-align: center;
         }
-
-        .btn-join {
-            background: var(--blue);
-            color: white;
-            box-shadow: 0 4px 0 #2563eb;
+        .char-card.active {
+            border-color: var(--gold);
+            background: rgba(250, 204, 21, 0.15);
+            box-shadow: 0 0 15px rgba(250, 204, 21, 0.3);
         }
-
-        .btn-host:active, .btn-join:active {
-            transform: translateY(4px);
-            box-shadow: none;
+        .char-img {
+            width: 50px;
+            height: 50px;
+            margin: 0 auto 8px auto;
+            background-color: #0f172a;
+            border-radius: 50%;
+            background-size: cover;
+            background-position: center;
+            border: 2px solid #475569;
         }
+        .char-name { font-weight: bold; font-size: 14px; margin-bottom: 4px; }
+        .char-skill { font-size: 11px; color: var(--gold); font-weight: bold; }
 
-        .room-code-box {
-            background: rgba(16, 185, 129, 0.1);
-            border: 2px dashed var(--green);
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-        }
-
-        .room-code-box h2 {
-            margin: 0;
-            color: var(--green);
+        #charDescBox {
+            background: rgba(0,0,0,0.5);
+            padding: 15px;
+            border-radius: 8px;
             font-size: 14px;
+            color: #cbd5e1;
+            border-left: 4px solid var(--green);
+            min-height: 80px;
+        }
+
+        .host-settings {
+            background: rgba(0,0,0,0.4);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border: 1px dashed #475569;
         }
 
         #displayRoomCode {
-            font-size: 40px;
+            font-size: 50px;
             color: white;
-            letter-spacing: 8px;
+            letter-spacing: 12px;
             margin: 10px 0;
             font-weight: bold;
             user-select: text;
+            text-shadow: 0 0 20px rgba(255,255,255,0.3);
         }
 
         #playerList {
             list-style: none;
             padding: 0;
             margin: 20px 0;
-            max-height: 220px;
+            max-height: 300px;
             overflow-y: auto;
             text-align: left;
-            background: rgba(0,0,0,0.3);
+            background: rgba(0,0,0,0.4);
             border-radius: 8px;
             border: 1px solid #334155;
         }
-
         #playerList li {
-            padding: 12px 20px;
+            padding: 15px 20px;
             border-bottom: 1px solid #334155;
             display: flex;
             justify-content: space-between;
-            gap: 12px;
             align-items: center;
         }
 
-        #playerList li:last-child { border-bottom: none; }
-
-        .player-name { font-weight: bold; font-size: 16px; }
-        .player-team {
-            font-size: 12px;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-weight: bold;
-        }
+        .team-badge { padding: 4px 10px; border-radius: 4px; font-weight: bold; font-size: 13px; }
         .team-blue { background: rgba(59, 130, 246, 0.2); color: #93c5fd; border: 1px solid #3b82f6; }
         .team-green { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid #10b981; }
 
@@ -196,10 +279,11 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            color: rgba(255,255,255,0.55);
+            color: rgba(255,255,255,0.7);
             font-size: 24px;
             pointer-events: none;
             z-index: 15;
+            text-shadow: 0 0 5px black;
         }
 
         #placar {
@@ -207,172 +291,114 @@
             top: 18px;
             left: 50%;
             transform: translateX(-50%);
-            font-size: 34px;
+            font-size: 28px;
             font-weight: bold;
             background: rgba(0,0,0,0.8);
-            padding: 10px 36px;
+            padding: 10px 40px;
             border-radius: 12px;
             border: 2px solid var(--green);
             pointer-events: none;
             z-index: 15;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
         }
-
         .score-blue { color: #60a5fa; }
         .score-green { color: #34d399; }
+
+        .team-names {
+            font-size: 14px;
+            color: #aaa;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+            letter-spacing: 1px;
+        }
 
         #staminaContainer {
             position: absolute;
             bottom: 30px;
             left: 50%;
             transform: translateX(-50%);
-            width: min(320px, 70vw);
-            height: 16px;
+            width: min(350px, 70vw);
+            height: 18px;
             background: rgba(0,0,0,0.8);
             border: 2px solid white;
-            border-radius: 8px;
+            border-radius: 10px;
             overflow: hidden;
             z-index: 15;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
         }
-
         #staminaBar {
             width: 100%;
             height: 100%;
-            background: var(--green);
-            transition: width 0.08s linear;
+            background: linear-gradient(90deg, #10b981, #34d399);
+            transition: width 0.1s linear;
         }
 
         #instructions {
             position: absolute;
             top: 18px;
             left: 18px;
-            background: rgba(0,0,0,0.72);
-            padding: 14px;
+            background: rgba(0,0,0,0.85);
+            padding: 18px;
             border-radius: 8px;
             pointer-events: none;
             font-size: 13px;
-            border: 1px solid rgba(255,255,255,0.1);
-            line-height: 1.5;
+            border: 1px solid rgba(255,255,255,0.2);
+            line-height: 1.6;
             z-index: 15;
+            color: #cbd5e1;
         }
+        #instructions b { color: var(--gold); }
 
-        #embaixadinhaUI, #shotPowerUI {
+        #handballUI {
             position: absolute;
             right: 18px;
+            top: 18px;
             width: min(360px, 34vw);
             min-width: 260px;
-            background: rgba(0,0,0,0.78);
-            border: 1px solid rgba(255,255,255,0.12);
+            background: rgba(0,0,0,0.9);
+            border: 1px solid rgba(255,255,255,0.2);
             border-radius: 12px;
-            padding: 14px;
+            padding: 16px;
             z-index: 18;
             display: none;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
         }
 
-        #embaixadinhaUI { top: 18px; }
-        #shotPowerUI { top: 190px; }
-
-        #embaixadinhaTitle, #shotPowerTitle {
-            font-weight: 800;
-            color: #fde68a;
-            font-size: 15px;
-            margin-bottom: 8px;
-            text-transform: uppercase;
-        }
-
-        #embaixadinhaText, #shotPowerText {
-            font-size: 14px;
-            color: var(--text-soft);
-            margin-bottom: 10px;
-        }
-
-        #embaixadinhaBar, #shotPowerBar {
+        #handballBar {
             position: relative;
             width: 100%;
-            height: 22px;
+            height: 26px;
             background: #1e293b;
             border-radius: 999px;
             overflow: hidden;
-            border: 2px solid #334155;
+            border: 2px solid #475569;
         }
-
-        #embaixadinhaZone, #shotPowerPerfect {
+        #handballZone {
             position: absolute;
             top: 0;
             height: 100%;
             border-radius: 999px;
+            background: linear-gradient(90deg, #22c55e, #84cc16);
         }
-
-        #embaixadinhaZone { background: linear-gradient(90deg, #22c55e, #84cc16); }
-        #shotPowerPerfect { background: linear-gradient(90deg, #f59e0b, #facc15); }
-
-        #embaixadinhaMarker, #shotPowerMarker {
+        #handballMarker {
             position: absolute;
             top: -3px;
-            width: 6px;
-            height: 28px;
+            width: 8px;
+            height: 32px;
             background: white;
-            box-shadow: 0 0 10px rgba(255,255,255,0.85);
+            box-shadow: 0 0 10px rgba(255,255,255,0.9);
             border-radius: 999px;
         }
 
-        #embaixadinhaCounter, #shotPowerValue {
-            margin-top: 10px;
-            font-size: 18px;
-            font-weight: bold;
-            color: white;
-        }
-
-        #embaixadinhaSmall, #shotPowerSmall {
-            margin-top: 6px;
-            color: #94a3b8;
-            font-size: 12px;
-        }
-
-        #globalEventText {
-            position: absolute;
-            top: 84px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0,0,0,0.85);
-            border: 2px solid rgba(255,255,255,0.2);
-            border-radius: 10px;
-            padding: 14px 24px;
-            z-index: 16;
-            font-weight: 900;
-            font-size: 22px;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            display: none;
-            text-align: center;
-        }
-
-        #netStats {
-            position: absolute;
-            bottom: 56px;
-            right: 16px;
-            z-index: 15;
-            font-size: 12px;
-            color: #93c5fd;
-            background: rgba(0,0,0,0.55);
-            padding: 6px 10px;
-            border-radius: 8px;
-            pointer-events: none;
-        }
-        
-        #stunOverlay {
+        #caosOverlay {
             position: absolute;
             inset: 0;
-            background: rgba(220, 38, 38, 0.3);
-            display: none;
-            z-index: 14;
+            background: rgba(0,0,0,0.9);
+            z-index: 13;
             pointer-events: none;
-            justify-content: center;
-            align-items: center;
-            font-size: 50px;
-            font-weight: bold;
-            color: white;
-            text-shadow: 2px 2px 10px red;
-            text-transform: uppercase;
+            display: none;
+            transition: opacity 1s;
         }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -381,112 +407,189 @@
 <body oncontextmenu="return false;">
     <div id="mainMenuUI" class="menu-container">
         <div class="panel">
-            <h1>SENAIFUT</h1>
-            <input type="text" id="playerName" placeholder="Seu Nome" maxlength="12" />
-            
-            <select id="playerTeam">
-                <option value="blue">Equipe Azul</option>
-                <option value="green">Equipe Verde</option>
-            </select>
+            <div class="panel-left">
+                <h1>SENAIFUT 3D</h1>
+                <input type="text" id="playerName" placeholder="Digite seu Nome" maxlength="12" />
+                <select id="playerTeam">
+                    <option value="blue">Jogar na Equipe Azul</option>
+                    <option value="green">Jogar na Equipe Verde</option>
+                </select>
+                <button class="btn-host" id="btnCreate">Criar Sala (Host)</button>
+                <div style="margin: 20px 0; color: #64748b; font-size: 14px; font-weight: bold; text-align: center;">OU ENTRE EM UMA SALA</div>
+                <input type="text" id="joinCode" placeholder="Código (6 dígitos)" maxlength="6" style="text-align:center; font-size:24px; letter-spacing:6px; font-weight: bold;" />
+                <button class="btn-join" id="btnJoin">Entrar na Sala</button>
+                <div id="statusText" style="margin-top:15px; color:var(--gold); font-size:14px; font-weight: bold; text-align: center;"></div>
+            </div>
 
-            <select id="playerChar">
-                <option value="brisa.png">Brisa</option>
-                <option value="edson.png">Edson</option>
-                <option value="eduarda.png">Eduarda</option>
-                <option value="gabriela.png">Gabriela</option>
-                <option value="joão.png">João</option>
-                <option value="leo.png">Leo</option>
-                <option value="rafa.png">Rafa</option>
-                <option value="rafaela.png">Rafaela</option>
-                <option value="taiana.png">Taiana</option>
-            </select>
-
-            <div style="margin: 20px 0; border-top: 1px solid #334155;"></div>
-
-            <button class="btn-host" id="btnCreate">Criar Sala (Host)</button>
-            <div style="margin: 15px 0; color: #64748b; font-size: 14px;">OU</div>
-            <input type="text" id="joinCode" placeholder="Código (6 dígitos)" maxlength="6" style="text-align:center; font-size:20px; letter-spacing:4px;" />
-            <button class="btn-join" id="btnJoin">Entrar na Sala</button>
-            <div id="statusText" style="margin-top:15px; color:#cbd5e1; font-size:14px;"></div>
+            <div class="panel-right">
+                <h2 class="title-sec">ESCOLHA SEU PERSONAGEM</h2>
+                <div class="char-grid" id="charGrid"></div>
+                <div id="charDescBox">
+                    <strong id="descName" style="color: white; font-size: 16px;">Personagem</strong><br>
+                    <span id="descSkill" style="color: var(--gold); font-weight: bold;">Habilidade</span><br><br>
+                    <span id="descText">Descrição</span>
+                </div>
+                <div class="host-settings">
+                    <div style="font-size: 12px; color: #94a3b8; margin-bottom: 8px; font-weight: bold;">OPÇÕES DO HOST</div>
+                    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                        <input type="text" id="hostTeamBlue" placeholder="Time Azul" value="Azul FC" style="margin: 0;" />
+                        <input type="text" id="hostTeamGreen" placeholder="Time Verde" value="Verde FC" style="margin: 0;"/>
+                    </div>
+                    <label style="color: #cbd5e1; font-size: 13px; display: flex; align-items: center; gap: 5px; margin-bottom: 10px;">
+                        <input type="checkbox" id="hostGk" checked style="width: auto; margin:0;"> Ativar Goleiros I.A.
+                    </label>
+                    <select id="hostMode" style="margin: 0; padding: 10px;">
+                        <option value="tradicional">Modo: Tradicional</option>
+                        <option value="caos">Modo: FUT CAOS (Eventos Malucos)</option>
+                    </select>
+                </div>
+            </div>
         </div>
     </div>
 
     <div id="waitingRoomUI" class="menu-container">
-        <div class="panel">
-            <div class="room-code-box">
-                <h2>CÓDIGO DA SALA:</h2>
+        <div class="panel" style="flex-direction: column; width: min(90vw, 600px); padding: 40px;">
+            <div style="text-align: center; background: rgba(16, 185, 129, 0.1); border: 2px dashed var(--green); padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                <h2 style="margin: 0; color: var(--green); font-size: 18px;">CÓDIGO DA SALA:</h2>
                 <div id="displayRoomCode">------</div>
-                <div style="font-size:12px; color:#cbd5e1;">Passe este código para os seus amigos entrarem.</div>
+                <p style="margin: 0; font-size: 14px; color: #cbd5e1;">Passe este código para seus amigos.</p>
             </div>
-
-            <h3 style="margin:0; text-align:left; color:#cbd5e1; font-size:14px;">JOGADORES NA SALA:</h3>
+            <h3 style="color:#cbd5e1; font-size:16px; margin-bottom: 10px;">JOGADORES NA SALA:</h3>
             <ul id="playerList"></ul>
-
-            <button class="btn-host" id="btnStartGame" style="display:none;">Começar Partida</button>
-            <div id="waitingText" style="display:none; color:#cbd5e1;">Aguardando o Host iniciar a partida...</div>
+            <button class="btn-host" id="btnStartGame" style="display:none; margin-top: 20px;">Começar Partida</button>
+            <div id="waitingText" style="display:none; color:var(--gold); font-weight: bold; text-align: center; margin-top: 20px; font-size: 18px;">Aguardando o ADM iniciar...</div>
         </div>
     </div>
 
     <div id="gameUI">
-        <div id="lockOverlay">
-            <h2>CLIQUE PARA JOGAR</h2>
-            <p>Seu mouse será travado na tela para controlar a câmera.</p>
+        <div id="lockOverlay"><h2>CLIQUE PARA JOGAR</h2><p style="font-size: 18px; color: #ddd;">O mouse será travado na tela.</p></div>
+        <div id="crosshair">✛</div>
+        <div id="placar">
+            <div class="team-names"><span id="nameBlue">AZUL</span> x <span id="nameGreen">VERDE</span></div>
+            <span id="score1" class="score-blue">0</span> - <span id="score2" class="score-green">0</span>
         </div>
 
-        <div id="crosshair">✛</div>
-        <div id="placar"><span id="score1" class="score-blue">0</span> - <span id="score2" class="score-green">0</span></div>
+        <div id="refStatus">👀 JUIZ DE OLHO!</div>
         <div id="globalEventText"></div>
-        <div id="stunOverlay">DERRUBADO!</div>
+        <div id="caosOverlay"></div>
+
+        <div id="stunOverlay">
+            <span id="stunMessage">DERRUBADO!</span>
+            <div id="redCardTimer"></div>
+        </div>
 
         <div id="instructions">
-            <b>CONTROLES</b><br><br>
-            <b>W,A,S,D</b>: Andar / Conduzir<br>
-            <b>SHIFT</b>: Correr<br>
-            <b>ESPAÇO</b>: Pular / Cabecear<br>
+            <b>W,A,S,D</b>: Mover | <b>SHIFT</b>: Correr<br>
+            <b>ESPAÇO</b>: Pular<br>
             <b>C</b>: Carrinho<br>
-            <b>G</b>: Murro (Manda pra longe)<br>
-            <b>Cliq. Esq.</b>: Chute forte direto<br>
+            <b>G</b>: Soco<br>
+            <b>V</b>: Bicicleta<br>
+            <b>R</b>: Passe Automático<br>
+            <b>F</b>: Pegar de Mão (Risco Amarelo)<br>
+            <b>Q / E</b>: Curva (Esq / Dir)<br>
+            <b>X</b>: Especial (Rafa e Gabriela)<br>
+            <b>Cliq. Esq.</b>: Chute normal<br>
             <b>Cliq. Dir.</b>: Cavadinha<br>
-            <b>R</b>: Passe automático<br>
-            <b>E</b>: Embaixadinha<br>
-            <b>F</b>: Chute Técnico (Força)
         </div>
 
-        <div id="embaixadinhaUI">
-            <div id="embaixadinhaTitle">EMBAIXADINHA</div>
-            <div id="embaixadinhaText">Aperte <b>E</b> quando a barra branca estiver na zona verde.</div>
-            <div id="embaixadinhaBar">
-                <div id="embaixadinhaZone"></div>
-                <div id="embaixadinhaMarker"></div>
-            </div>
-            <div id="embaixadinhaCounter">Contador: 0</div>
-            <div id="embaixadinhaSmall">Todos veem sua sequência em tempo real.</div>
-        </div>
-
-        <div id="shotPowerUI">
-            <div id="shotPowerTitle">CHUTE TÉCNICO</div>
-            <div id="shotPowerText">Aperte <b>F</b> de novo para travar a força.</div>
-            <div id="shotPowerBar">
-                <div id="shotPowerPerfect"></div>
-                <div id="shotPowerMarker"></div>
-            </div>
-            <div id="shotPowerValue">Força: 0%</div>
-            <div id="shotPowerSmall">Quanto mais perto da zona amarela, mais forte o chute.</div>
+        <div id="handballUI">
+            <div id="handballTitle" style="font-weight: 900; color: #facc15;">MÃO NA BOLA</div>
+            <div id="hbTxt" style="font-size: 14px; margin-bottom: 10px;">Aperte F no verde!</div>
+            <div id="handballBar"><div id="handballZone"></div><div id="handballMarker"></div></div>
         </div>
 
         <div id="staminaContainer"><div id="staminaBar"></div></div>
-        <div id="netStats">NET: --</div>
     </div>
 
     <script>
-        window.addEventListener('contextmenu', (e) => e.preventDefault());
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playSound(type) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            if (type === 'kick') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                gain.gain.setValueAtTime(1, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.3);
+            } else if (type === 'whistle') {
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(2000, audioCtx.currentTime);
+                osc.frequency.setValueAtTime(2500, audioCtx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.4);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.4);
+            } else if (type === 'goal') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+                osc.frequency.linearRampToValueAtTime(800, audioCtx.currentTime + 1.0);
+                gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+                gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 1.0);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 1.0);
+            } else if (type === 'hit') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(100, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+                gain.gain.setValueAtTime(0.8, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.2);
+            }
+        }
+
+        const CHAR_DATA = [
+            { id: 'brisa.png', name: 'Brisa', skill: 'Vento a Favor', desc: 'Extremamente rápida e ágil.', stats: { speed: 1.4, kick: 0.85, jump: 1.0, stmMax: 1.0, stmRegen: 1.2, curve: 1.0, scale: 1.0 } },
+            { id: 'edson.png', name: 'Edson', skill: 'Bomba Atômica', desc: 'Chute absurdamente forte e pesado.', stats: { speed: 0.85, kick: 1.6, jump: 0.9, stmMax: 1.0, stmRegen: 0.9, curve: 0.8, scale: 1.0 } },
+            { id: 'eduarda.png', name: 'Eduarda', skill: 'Pulmão de Aço', desc: 'Stamina quase infinita. Não cansa.', stats: { speed: 1.1, kick: 0.95, jump: 1.0, stmMax: 2.0, stmRegen: 1.5, curve: 1.0, scale: 1.0 } },
+            { id: 'gabriela.png', name: 'Gabriela', skill: 'Teleguiado Supremo', desc: 'Especial no X: o chute vai reto e guiado para o gol.', stats: { speed: 1.0, kick: 1.0, jump: 1.0, stmMax: 1.0, stmRegen: 1.0, curve: 1.0, scale: 1.0 } },
+            { id: 'joão.png', name: 'João (ADM)', skill: 'O Dono do Jogo', desc: 'Status MÁXIMOS. Imparável, inalcançável, APELÃO.', stats: { speed: 1.6, kick: 1.8, jump: 1.5, stmMax: 3.0, stmRegen: 3.0, curve: 2.0, scale: 1.2 } },
+            { id: 'leo.png', name: 'Leo', skill: 'Acrobata', desc: 'Pula muito mais alto que os outros.', stats: { speed: 1.0, kick: 1.0, jump: 1.6, stmMax: 1.0, stmRegen: 1.0, curve: 1.0, scale: 1.0 } },
+            { id: 'rafaela.png', name: 'Rafaela', skill: 'Trator', desc: 'Corre sólida e recupera stamina rápido.', stats: { speed: 0.95, kick: 1.1, jump: 0.9, stmMax: 1.2, stmRegen: 1.4, curve: 0.9, scale: 1.0 } },
+            { id: 'rafa.png', name: 'Rafa', skill: 'Cabeçada Mortal', desc: 'Especial no X: cabeçada em linha reta para frente e levemente para baixo.', stats: { speed: 1.0, kick: 1.0, jump: 1.0, stmMax: 1.0, stmRegen: 1.0, curve: 1.0, scale: 1.0 } },
+            { id: 'taiana.png', name: 'Taiana', skill: 'Recarga Turbo', desc: 'Stamina regenera numa velocidade absurda.', stats: { speed: 1.05, kick: 1.0, jump: 1.0, stmMax: 1.0, stmRegen: 2.0, curve: 1.0, scale: 1.0 } }
+        ];
+
+        let selectedCharId = 'brisa.png';
+        const charGrid = document.getElementById('charGrid');
+
+        function updateDescBox(char) {
+            document.getElementById('descName').innerText = char.name;
+            document.getElementById('descSkill').innerText = "Poder: " + char.skill;
+            document.getElementById('descText').innerText = char.desc;
+        }
+
+        CHAR_DATA.forEach((char, index) => {
+            const card = document.createElement('div');
+            card.className = `char-card ${index === 0 ? 'active' : ''}`;
+            if (index === 0) updateDescBox(char);
+
+            card.onclick = () => {
+                document.querySelectorAll('.char-card').forEach(c => c.classList.remove('active'));
+                card.classList.add('active');
+                selectedCharId = char.id;
+                updateDescBox(char);
+            };
+
+            card.innerHTML = `
+                <div class="char-img" style="background-image: url('${char.id}');"></div>
+                <div class="char-name">${char.name}</div>
+                <div class="char-skill">${char.skill}</div>
+            `;
+            charGrid.appendChild(card);
+        });
 
         const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
         const now = () => performance.now();
-
-        function generateCode() {
-            return Math.floor(100000 + Math.random() * 900000).toString();
-        }
+        const generateCode = () => Math.floor(100000 + Math.random() * 900000).toString();
 
         let peer = null;
         let connections = {};
@@ -496,125 +599,104 @@
 
         let myInfo = { id: '', name: '', char: '', team: '' };
         let roomPlayers = [];
+        let teamNames = { blue: 'Azul FC', green: 'Verde FC' };
+        let hasGk = true;
+        let gameMode = 'tradicional';
+
+        let caosTimer = 0;
+        let caosActive = false;
+        let blackoutBlinkTimer = 0;
 
         const uiMenu = document.getElementById('mainMenuUI');
         const uiWaiting = document.getElementById('waitingRoomUI');
         const uiGame = document.getElementById('gameUI');
         const statusTxt = document.getElementById('statusText');
         const lockOverlay = document.getElementById('lockOverlay');
-        const netStats = document.getElementById('netStats');
         const stunOverlay = document.getElementById('stunOverlay');
+        const globalEventText = document.getElementById('globalEventText');
+        const refStatus = document.getElementById('refStatus');
+        const caosOverlay = document.getElementById('caosOverlay');
 
         function updatePlayerListUI() {
             const list = document.getElementById('playerList');
             list.innerHTML = '';
-
             roomPlayers.forEach((p) => {
                 const li = document.createElement('li');
-                const teamClass = p.team === 'blue' ? 'team-blue' : 'team-green';
-                const teamName = p.team === 'blue' ? 'AZUL' : 'VERDE';
-                
-                li.innerHTML = `
-                    <span class="player-name">
-                        ${p.name} ${p.id === myInfo.id ? '(Você)' : ''} ${p.isHost ? '👑' : ''}
-                    </span>
-                    <div>
-                        <span class="player-team ${teamClass}">${teamName}</span>
-                        <span class="player-char">${p.char.replace('.png', '')}</span>
-                    </div>
-                `;
+                const tClass = p.team === 'blue' ? 'team-blue' : 'team-green';
+                const tName = p.team === 'blue' ? teamNames.blue : teamNames.green;
+                const cName = CHAR_DATA.find(c => c.id === p.char)?.name || '?';
+                li.innerHTML = `<span><b>${p.name}</b> <small style="color:#94a3b8;">(${cName})</small> ${p.id === myInfo.id ? '(Você)' : ''} ${p.isHost ? '👑' : ''}</span><span class="team-badge ${tClass}">${tName}</span>`;
                 list.appendChild(li);
             });
         }
 
         function broadcast(data) {
             for (const id in connections) {
-                const conn = connections[id];
-                if (conn && conn.open) conn.send(data);
+                if (connections[id]?.open) connections[id].send(data);
             }
-        }
-
-        function showStatus(text) {
-            statusTxt.innerText = text;
         }
 
         document.getElementById('btnCreate').onclick = () => {
             if (peer) return;
+            audioCtx.resume();
 
             myInfo.name = (document.getElementById('playerName').value || 'Host').trim().slice(0, 12);
-            myInfo.char = document.getElementById('playerChar').value;
+            myInfo.char = selectedCharId;
             myInfo.team = document.getElementById('playerTeam').value;
 
-            const code = generateCode();
-            showStatus('Criando sala...');
+            teamNames.blue = document.getElementById('hostTeamBlue').value || 'Azul FC';
+            teamNames.green = document.getElementById('hostTeamGreen').value || 'Verde FC';
+            hasGk = document.getElementById('hostGk').checked;
+            gameMode = document.getElementById('hostMode').value;
 
+            const code = generateCode();
+            statusTxt.innerText = 'Criando sala...';
             peer = new Peer(code);
 
             peer.on('open', (id) => {
                 isHost = true;
                 myInfo.id = id;
                 roomPlayers = [{ ...myInfo, isHost: true }];
-
                 uiMenu.style.display = 'none';
                 uiWaiting.style.display = 'flex';
                 document.getElementById('displayRoomCode').innerText = id;
                 document.getElementById('btnStartGame').style.display = 'block';
-
                 updatePlayerListUI();
-                showStatus('');
             });
 
             peer.on('connection', (conn) => {
                 connections[conn.peer] = conn;
-
-                conn.on('open', () => {
-                    conn.send({ type: 'ping', t: Date.now() });
-                });
 
                 conn.on('data', (data) => handleNetworkData(conn.peer, data));
 
                 conn.on('close', () => {
                     delete connections[conn.peer];
                     roomPlayers = roomPlayers.filter(p => p.id !== conn.peer);
-
                     if (networkMeshes[conn.peer]) {
                         scene.remove(networkMeshes[conn.peer].mesh);
                         delete networkMeshes[conn.peer];
                     }
-
-                    if (juggle.active && juggle.playerId === conn.peer) endJuggle('disconnect');
-                    if (shotMini.active && shotMini.playerId === conn.peer) cancelShotMiniHost();
-                    
-                    if (slidingPlayers[conn.peer]) delete slidingPlayers[conn.peer];
-                    if (stunnedPlayers[conn.peer]) delete stunnedPlayers[conn.peer];
-
                     updatePlayerListUI();
-                    if (!hasGameStarted) broadcast({ type: 'lobbySync', players: roomPlayers });
+                    broadcast({ type: 'lobbySync', players: roomPlayers, teams: teamNames, hasGk, gameMode });
                 });
-
-                conn.on('error', () => {});
-            });
-
-            peer.on('error', (err) => {
-                alert('Erro ao criar sala: ' + err.type);
-                location.reload();
             });
         };
 
         document.getElementById('btnJoin').onclick = () => {
             if (peer) return;
+            audioCtx.resume();
 
             myInfo.name = (document.getElementById('playerName').value || 'Visitante').trim().slice(0, 12);
-            myInfo.char = document.getElementById('playerChar').value;
+            myInfo.char = selectedCharId;
             myInfo.team = document.getElementById('playerTeam').value;
 
             const code = document.getElementById('joinCode').value.trim();
             if (code.length !== 6) {
-                alert('Digite os 6 dígitos!');
+                statusTxt.innerText = "Código de 6 dígitos!";
                 return;
             }
 
-            showStatus('Entrando na sala...');
+            statusTxt.innerText = 'Conectando...';
             peer = new Peer();
 
             peer.on('open', (id) => {
@@ -622,7 +704,6 @@
                 hostConnection = peer.connect(code, { reliable: false });
 
                 hostConnection.on('open', () => {
-                    isHost = false;
                     hostConnection.send({ type: 'joinReq', player: myInfo });
                     uiMenu.style.display = 'none';
                     uiWaiting.style.display = 'flex';
@@ -632,755 +713,630 @@
 
                 hostConnection.on('data', (data) => handleNetworkData('host', data));
 
-                hostConnection.on('close', () => {
-                    alert('Conexão com o host foi perdida.');
-                    location.reload();
-                });
-
                 hostConnection.on('error', () => {
-                    alert('Sala não encontrada!');
-                    location.reload();
+                    statusTxt.innerText = "Erro ao conectar.";
+                    peer.destroy();
+                    peer = null;
                 });
-            });
 
-            peer.on('error', () => {
-                alert('Falha de conexão.');
-                location.reload();
+                hostConnection.on('close', () => {
+                    statusTxt.innerText = "Conexão com o host perdida.";
+                });
             });
         };
 
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x0f172a);
-        scene.fog = new THREE.Fog(0x0f172a, 70, 180);
+        scene.background = new THREE.Color(0x0a0f1d);
 
         const camera = new THREE.PerspectiveCamera(80, window.innerWidth / window.innerHeight, 0.1, 1000);
-
-        const renderer = new THREE.WebGLRenderer({
-            antialias: true,
-            alpha: false,
-            powerPreference: 'high-performance'
-        });
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
+        const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.2));
         renderer.setSize(window.innerWidth, window.innerHeight);
 
-        const ambient = new THREE.AmbientLight(0xffffff, 0.72);
-        scene.add(ambient);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.35);
+        scene.add(ambientLight);
 
-        const dirLight = new THREE.DirectionalLight(0xffffff, 0.7);
-        dirLight.position.set(30, 60, 20);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.5);
+        dirLight.position.set(20, 60, 20);
         scene.add(dirLight);
-
-        const textureLoader = new THREE.TextureLoader();
 
         const fieldWidth = 60;
         const fieldLength = 100;
         const ballRadius = 0.6;
-        
-        // POTÊNCIAS ATUALIZADAS
-        const DIRECT_KICK_POWER = 6.8; 
-        const TOUCH_PUSH_FORCE = 2.3;
+        const textureLoader = new THREE.TextureLoader();
 
-        const worldGroup = new THREE.Group();
-        scene.add(worldGroup);
-
-        const field = new THREE.Mesh(
-            new THREE.PlaneGeometry(fieldWidth, fieldLength),
-            new THREE.MeshLambertMaterial({ color: 0x10b981 })
-        );
+        let fieldMat = new THREE.MeshLambertMaterial({ color: 0x10b981 });
+        const field = new THREE.Mesh(new THREE.PlaneGeometry(fieldWidth, fieldLength), fieldMat);
         field.rotation.x = -Math.PI / 2;
-        worldGroup.add(field);
+        scene.add(field);
 
-        const outlineMat = new THREE.LineBasicMaterial({ color: 0xffffff });
+        textureLoader.load('campo.jpg', tex => {
+            tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+            tex.repeat.set(1, 1);
+            field.material = new THREE.MeshLambertMaterial({ map: tex });
+        });
 
-        function makeRectLine(width, height) {
-            const hw = width / 2;
-            const hh = height / 2;
-            const pts = [
-                new THREE.Vector3(-hw, 0.05, -hh),
-                new THREE.Vector3(hw, 0.05, -hh),
-                new THREE.Vector3(hw, 0.05, hh),
-                new THREE.Vector3(-hw, 0.05, hh),
-                new THREE.Vector3(-hw, 0.05, -hh)
-            ];
-            const geo = new THREE.BufferGeometry().setFromPoints(pts);
-            return new THREE.Line(geo, outlineMat);
+        const lineMat = new THREE.LineBasicMaterial({ color: 0xffffff });
+        const fieldLines = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(fieldWidth, fieldLength)), lineMat);
+        fieldLines.rotation.x = -Math.PI / 2;
+        fieldLines.position.y = 0.05;
+        scene.add(fieldLines);
+
+        textureLoader.load('plateia.jpg', tex => {
+            tex.wrapS = THREE.RepeatWrapping;
+            tex.repeat.set(5, 1);
+            const audMat = new THREE.MeshBasicMaterial({
+                map: tex,
+                side: THREE.DoubleSide,
+                transparent: true,
+                opacity: 0.15
+            });
+
+            const audL = new THREE.Mesh(new THREE.PlaneGeometry(200, 40), audMat);
+            audL.position.set(-60, 15, 0);
+            audL.rotation.y = Math.PI / 2;
+            scene.add(audL);
+
+            const audR = new THREE.Mesh(new THREE.PlaneGeometry(200, 40), audMat);
+            audR.position.set(60, 15, 0);
+            audR.rotation.y = -Math.PI / 2;
+            scene.add(audR);
+
+            const audT = new THREE.Mesh(new THREE.PlaneGeometry(140, 40), audMat);
+            audT.position.set(0, 15, -80);
+            scene.add(audT);
+
+            const audB = new THREE.Mesh(new THREE.PlaneGeometry(140, 40), audMat);
+            audB.position.set(0, 15, 80);
+            audB.rotation.y = Math.PI;
+            scene.add(audB);
+        });
+
+        function createNetTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 64;
+            canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+
+            ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for (let i = 0; i <= 64; i += 8) {
+                ctx.moveTo(i, 0); ctx.lineTo(i, 64);
+                ctx.moveTo(0, i); ctx.lineTo(64, i);
+            }
+            ctx.stroke();
+
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+            tex.repeat.set(6, 3);
+            return tex;
         }
 
-        worldGroup.add(makeRectLine(fieldWidth, fieldLength));
+        const netTex = createNetTexture();
 
-        const midLineGeo = new THREE.BufferGeometry().setFromPoints([
-            new THREE.Vector3(-fieldWidth / 2, 0.05, 0),
-            new THREE.Vector3(fieldWidth / 2, 0.05, 0)
-        ]);
-        worldGroup.add(new THREE.Line(midLineGeo, outlineMat));
+        function createGoal(zPos, isBlue) {
+            const goalGroup = new THREE.Group();
+            goalGroup.position.set(0, 0, zPos);
 
-        const circle = new THREE.Mesh(
-            new THREE.RingGeometry(8.8, 9, 48),
-            new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide })
-        );
-        circle.rotation.x = -Math.PI / 2;
-        circle.position.y = 0.05;
-        worldGroup.add(circle);
+            const postColor = isBlue ? 0x3b82f6 : 0x10b981;
+            const postMat = new THREE.MeshLambertMaterial({ color: postColor });
 
-        function createGoal(zPos, colorHex) {
-            const goalMat = new THREE.MeshBasicMaterial({ color: colorHex, wireframe: true });
-            const goal = new THREE.Mesh(new THREE.BoxGeometry(14, 4, 4), goalMat);
-            goal.position.set(0, 2, zPos);
-            worldGroup.add(goal);
+            const lPost = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 4, 8), postMat);
+            lPost.position.set(-7, 2, 0);
+
+            const rPost = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 4, 8), postMat);
+            rPost.position.set(7, 2, 0);
+
+            const crossbar = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 14, 8), postMat);
+            crossbar.rotation.z = Math.PI / 2;
+            crossbar.position.set(0, 4, 0);
+
+            const netMat = new THREE.MeshBasicMaterial({ map: netTex, transparent: true, side: THREE.DoubleSide });
+            const backNet = new THREE.Mesh(new THREE.PlaneGeometry(14, 4), netMat);
+            backNet.position.set(0, 2, isBlue ? -3 : 3);
+
+            const leftNet = new THREE.Mesh(new THREE.PlaneGeometry(3, 4), netMat);
+            leftNet.position.set(-7, 2, isBlue ? -1.5 : 1.5);
+            leftNet.rotation.y = Math.PI / 2;
+
+            const rightNet = new THREE.Mesh(new THREE.PlaneGeometry(3, 4), netMat);
+            rightNet.position.set(7, 2, isBlue ? -1.5 : 1.5);
+            rightNet.rotation.y = Math.PI / 2;
+
+            goalGroup.add(lPost, rPost, crossbar, backNet, leftNet, rightNet);
+            scene.add(goalGroup);
         }
 
-        createGoal(-fieldLength / 2, 0x3b82f6); // Gol Azul
-        createGoal(fieldLength / 2, 0x10b981); // Gol Verde
+        createGoal(-fieldLength / 2, true);
+        createGoal(fieldLength / 2, false);
 
-        const ball = new THREE.Mesh(
-            new THREE.SphereGeometry(ballRadius, 18, 18),
-            new THREE.MeshPhongMaterial({ color: 0xffffff, shininess: 42 })
-        );
+        const gkGeo = new THREE.BoxGeometry(4, 3, 1);
+        const gkBlue = new THREE.Mesh(gkGeo, new THREE.MeshLambertMaterial({ color: 0x2563eb }));
+        const gkGreen = new THREE.Mesh(gkGeo, new THREE.MeshLambertMaterial({ color: 0x059669 }));
+        gkBlue.position.set(0, 1.5, -48);
+        gkGreen.position.set(0, 1.5, 48);
+        let gkVxBlue = 6;
+        let gkVxGreen = -6;
+
+        const ballMat = new THREE.MeshPhongMaterial({
+            color: 0xffffff,
+            emissive: 0x000000,
+            shininess: 70
+        });
+        const ball = new THREE.Mesh(new THREE.SphereGeometry(ballRadius, 16, 16), ballMat);
         scene.add(ball);
 
         let ballVelocity = new THREE.Vector3(0, 0, 0);
+        let targetBallPos = new THREE.Vector3(0, 5, 0);
+        let ballCurveForce = new THREE.Vector3(0, 0, 0);
+        let curveTimer = 0;
+        const ballLight = new THREE.PointLight(0xffffff, 0, 10);
+        ball.add(ballLight);
 
-        function createPlayerMesh(playerInfo) {
-            const teamColor = playerInfo.team === 'blue' ? 0x3b82f6 : 0x10b981;
-            const geo = new THREE.BoxGeometry(1.5, 3, 1.5);
-            const mat = new THREE.MeshLambertMaterial({ color: teamColor });
-            const mesh = new THREE.Mesh(geo, mat);
+        const judgeGroup = new THREE.Group();
+        judgeGroup.position.set(0, 18, 0);
+        judgeGroup.add(new THREE.Mesh(new THREE.BoxGeometry(6, 6, 6), new THREE.MeshLambertMaterial({ color: 0x111111 })));
 
-            mesh.position.set(0, -100, 0);
-            mesh.userData.playerId = playerInfo.id;
-            mesh.userData.playerName = playerInfo.name;
-            mesh.userData.team = playerInfo.team;
+        const eyeMat = new THREE.MeshBasicMaterial({ color: 0x330000 });
+        const e1 = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 1.5), eyeMat);
+        e1.position.set(-1.5, 0, 3.01); judgeGroup.add(e1);
+        const e2 = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 1.5), eyeMat);
+        e2.position.set(1.5, 0, 3.01); judgeGroup.add(e2);
+        const e3 = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 1.5), eyeMat);
+        e3.position.set(-1.5, 0, -3.01); e3.rotation.y = Math.PI; judgeGroup.add(e3);
+        const e4 = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 1.5), eyeMat);
+        e4.position.set(1.5, 0, -3.01); e4.rotation.y = Math.PI; judgeGroup.add(e4);
+        scene.add(judgeGroup);
 
-            textureLoader.load(
-                playerInfo.char,
-                (tex) => {
-                    tex.minFilter = THREE.LinearFilter;
-                    tex.magFilter = THREE.LinearFilter;
-                    mesh.material = new THREE.MeshLambertMaterial({ map: tex, color: 0xffffff });
-                    
-                    const edgeGeo = new THREE.EdgesGeometry(geo);
-                    const edgeMat = new THREE.LineBasicMaterial({ color: teamColor, linewidth: 2 });
-                    const edges = new THREE.LineSegments(edgeGeo, edgeMat);
-                    mesh.add(edges);
-                },
-                undefined,
-                () => {}
-            );
+        const particleCount = 400;
+        const particleGeo = new THREE.BoxGeometry(0.3, 0.3, 0.3);
+        const particlesInstanced = new THREE.InstancedMesh(
+            particleGeo,
+            new THREE.MeshBasicMaterial({ color: 0xffffff }),
+            particleCount
+        );
+        const dummy = new THREE.Object3D();
+        const tempColor = new THREE.Color();
+        let particleData = [];
 
-            scene.add(mesh);
+        particlesInstanced.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(particleCount * 3), 3);
 
-            return {
-                mesh,
-                info: playerInfo,
-                targetPos: new THREE.Vector3(0, -100, 0),
-                targetRotY: 0,
-                isStunned: false
-            };
+        for (let i = 0; i < particleCount; i++) {
+            particleData.push({
+                active: false,
+                type: 0,
+                life: 0,
+                pos: new THREE.Vector3(),
+                vel: new THREE.Vector3()
+            });
+            particlesInstanced.setMatrixAt(i, dummy.matrix);
+            particlesInstanced.setColorAt(i, new THREE.Color(0x10b981));
         }
 
-        let placar1 = 0; // Azul
-        let placar2 = 0; // Verde
+        scene.add(particlesInstanced);
+
+        function getTeamColor(team) {
+            return team === 'blue' ? 0x3b82f6 : 0x10b981;
+        }
+
+        function spawnExplosion(pos, team, count, speed = 15, dir = null) {
+            tempColor.setHex(getTeamColor(team));
+            let spawned = 0;
+
+            for (let i = 0; i < particleCount; i++) {
+                if (!particleData[i].active) {
+                    particleData[i].active = true;
+                    particleData[i].type = 0;
+                    particleData[i].life = 1.0;
+                    particleData[i].pos.copy(pos);
+                    particlesInstanced.setColorAt(i, tempColor);
+
+                    if (dir) {
+                        particleData[i].vel.set(
+                            dir.x * speed + (Math.random() - 0.5) * 5,
+                            dir.y * speed + Math.random() * 5,
+                            dir.z * speed + (Math.random() - 0.5) * 5
+                        );
+                    } else {
+                        particleData[i].vel.set(
+                            (Math.random() - 0.5) * speed,
+                            Math.random() * speed,
+                            (Math.random() - 0.5) * speed
+                        );
+                    }
+
+                    spawned++;
+                    if (spawned >= count) break;
+                }
+            }
+            particlesInstanced.instanceColor.needsUpdate = true;
+        }
+
+        function spawnConfetti(team) {
+            const colors = team === 'blue'
+                ? [0x3b82f6, 0x60a5fa, 0x2563eb]
+                : [0x10b981, 0x34d399, 0x059669];
+
+            let spawned = 0;
+            for (let i = 0; i < particleCount; i++) {
+                if (!particleData[i].active) {
+                    particleData[i].active = true;
+                    particleData[i].type = 1;
+                    particleData[i].life = 3.0;
+                    particleData[i].pos.set((Math.random() - 0.5) * 50, 15 + Math.random() * 10, (Math.random() - 0.5) * 80);
+                    particleData[i].vel.set((Math.random() - 0.5) * 4, -Math.random() * 6 - 2, (Math.random() - 0.5) * 4);
+                    tempColor.setHex(colors[Math.floor(Math.random() * colors.length)]);
+                    particlesInstanced.setColorAt(i, tempColor);
+                    spawned++;
+                    if (spawned >= 200) break;
+                }
+            }
+            particlesInstanced.instanceColor.needsUpdate = true;
+        }
+
+        function triggerGoalVFX(pos, team) {
+            playSound('goal');
+            spawnExplosion(pos, team, 100, 20);
+            spawnConfetti(team);
+            shakeIntensity = 15;
+        }
+
+        const trailMat = new THREE.LineBasicMaterial({
+            color: 0x3b82f6,
+            transparent: true,
+            opacity: 0.8,
+            linewidth: 3
+        });
+        const trailGeo = new THREE.BufferGeometry();
+        const maxTrail = 20;
+        const trailPositions = new Float32Array(maxTrail * 3);
+        trailGeo.setAttribute('position', new THREE.BufferAttribute(trailPositions, 3));
+        scene.add(new THREE.Line(trailGeo, trailMat));
+
+        let shakeIntensity = 0;
+        let placar1 = 0;
+        let placar2 = 0;
         let networkMeshes = {};
 
-        let gameStateInterval = null;
-        let sendPosInterval = null;
-        let lastBroadcastAt = 0;
-
-        const keys = { w: false, a: false, s: false, d: false, shift: false, space: false, e: false, f: false, c: false, r: false, g: false };
+        const keys = {
+            w: false, a: false, s: false, d: false,
+            shift: false, space: false, c: false, g: false, v: false,
+            f: false, q: false, e: false, r: false, x: false
+        };
 
         let stamina = 100;
         let pitch = 0;
         let yaw = 0;
-        let lastMoveSent = { x: 0, y: 0, z: 0, rotY: 0 };
-        let pingMs = 0;
-
         let playerVy = 0;
         let isJumping = false;
         let isSliding = false;
-        let slideTimer = 0;
-        let slideCooldown = 0; // Cooldown do carrinho
+        let slideCooldown = 0;
         let isStunned = false;
+        let myStunType = 'punch';
+        let knockbackVel = new THREE.Vector3();
         let stunTimer = 0;
-        
-        // Variaveis de Murro (Knockback físico)
-        let punchVx = 0;
-        let punchVy = 0;
-        let punchVz = 0;
+        let redCardTimer = 0;
+        let isDoingBicycle = false;
+        let bicycleTimer = 0;
+        let refLooking = false;
+        let refTimer = 5.0;
+        let slidingPlayersHost = {};
 
-        let slidingPlayers = {};
-        let stunnedPlayers = {};
-
-        // Rastreamento para Gol Contra
-        let lastTouchTeam = null;
-        let lastTouchName = '';
-
-        function updateLastTouch(id) {
-            lastTouchTeam = getPlayerTeamById(id);
-            lastTouchName = getPlayerNameById(id);
-        }
-
-        const globalEventText = document.getElementById('globalEventText');
-
-        const emUI = document.getElementById('embaixadinhaUI');
-        const emZone = document.getElementById('embaixadinhaZone');
-        const emMarker = document.getElementById('embaixadinhaMarker');
-        const emCounter = document.getElementById('embaixadinhaCounter');
-        const emText = document.getElementById('embaixadinhaText');
-
-        const shotPowerUI = document.getElementById('shotPowerUI');
-        const shotPowerPerfect = document.getElementById('shotPowerPerfect');
-        const shotPowerMarker = document.getElementById('shotPowerMarker');
-        const shotPowerValue = document.getElementById('shotPowerValue');
-        const shotPowerText = document.getElementById('shotPowerText');
-
-        const juggle = {
+        const handball = {
             active: false,
             playerId: null,
-            playerName: '',
             count: 0,
             meter: 0.5,
             meterDir: 1,
             zoneStart: 0.36,
             zoneSize: 0.28,
             speed: 0.9,
-            failGrace: 1.25,
-            timeout: 0,
-            baseHeight: 2.15,
-            bounceAmplitude: 0.95,
-            bounceTime: 0
+            timeout: 0
         };
 
-        const shotMini = {
-            active: false,
-            playerId: null,
-            playerName: '',
-            meter: 0.0,
-            dir: 1,
-            speed: 2.2,
-            perfectStart: 0.78,
-            perfectSize: 0.16,
-            timeout: 1.6
-        };
+        const hbUI = document.getElementById('handballUI');
+        const hbZone = document.getElementById('handballZone');
+        const hbMarker = document.getElementById('handballMarker');
 
-        function showGlobalEvent(msg, ms = 2200) {
-            globalEventText.textContent = msg;
-            globalEventText.style.display = 'block';
-            
-            // Troca cor baseada na mensagem para o Gol Contra chamar atenção
-            if(msg.includes('CONTRA')) {
-                globalEventText.style.color = '#ef4444'; // Red
-            } else if(msg.includes('GOL')) {
-                globalEventText.style.color = '#facc15'; // Gold
-            } else {
-                globalEventText.style.color = 'white';
-            }
-
-            clearTimeout(showGlobalEvent._timer);
-            showGlobalEvent._timer = setTimeout(() => {
-                globalEventText.style.display = 'none';
-            }, ms);
+        function getMyPower(stat) {
+            const c = CHAR_DATA.find(x => x.id === myInfo.char);
+            return c ? c.stats[stat] : 1.0;
         }
 
-        function getKickDirection() {
-            const dir = new THREE.Vector3();
-            camera.getWorldDirection(dir);
-            dir.y = 0.30;
-            return dir.normalize();
+        function getPlayerName(id) {
+            return id === myInfo.id ? myInfo.name : (roomPlayers.find(p => p.id === id)?.name || 'Jogador');
         }
 
-        function updateShotMiniUI() {
-            if (!shotMini.active) {
-                shotPowerUI.style.display = 'none';
-                return;
-            }
-
-            shotPowerUI.style.display = 'block';
-
-            const meterPct = shotMini.meter * 100;
-            const zonePct = shotMini.perfectStart * 100;
-            const zoneW = shotMini.perfectSize * 100;
-
-            shotPowerPerfect.style.left = `${zonePct}%`;
-            shotPowerPerfect.style.width = `${zoneW}%`;
-            shotPowerMarker.style.left = `calc(${meterPct}% - 3px)`;
-            shotPowerValue.textContent = `Força: ${Math.round(shotMini.meter * 100)}%`;
-
-            if (shotMini.playerId === myInfo.id) {
-                shotPowerText.innerHTML = `Aperte <b>F</b> de novo para travar a força.`;
-            } else {
-                shotPowerText.innerHTML = `<b>${shotMini.playerName}</b> está preparando um chute.`;
-            }
+        function getPlayerTeam(id) {
+            return id === myInfo.id ? myInfo.team : (roomPlayers.find(p => p.id === id)?.team || 'blue');
         }
 
-        function handleShotMiniClient(data) {
-            shotMini.active = data.active;
-            shotMini.playerId = data.playerId;
-            shotMini.playerName = data.playerName || '';
-            shotMini.meter = data.meter ?? 0;
-            updateShotMiniUI();
-        }
-
-        function broadcastShotMiniState() {
-            if (!isHost) return;
-
-            const payload = {
-                type: 'shotMiniState',
-                shotMini: {
-                    active: shotMini.active,
-                    playerId: shotMini.playerId,
-                    playerName: shotMini.playerName,
-                    meter: shotMini.meter
-                }
-            };
-
-            handleShotMiniClient(payload.shotMini);
-            broadcast(payload);
-        }
-
-        function cancelShotMiniHost() {
-            if (!shotMini.active) return;
-            shotMini.active = false;
-            shotMini.playerId = null;
-            shotMini.playerName = '';
-            shotMini.meter = 0;
-            shotMini.timeout = 1.6;
-            broadcastShotMiniState();
-        }
-
-        function startShotMiniHost(playerId) {
-            if (shotMini.active || juggle.active) return false;
-
-            const p = getPlayerPositionById(playerId);
-            if (!p) return false;
-            if (p.distanceTo(ball.position) > 6.0) return false;
-
-            shotMini.active = true;
-            shotMini.playerId = playerId;
-            shotMini.playerName = getPlayerNameById(playerId);
-            shotMini.meter = 0.04;
-            shotMini.dir = 1;
-            shotMini.speed = 2.6;
-            shotMini.timeout = 1.6;
-
-            broadcastShotMiniState();
-            return true;
-        }
-
-        function finishShotMiniHost(playerId) {
-            if (!shotMini.active || shotMini.playerId !== playerId) return;
-
-            const p = getPlayerPositionById(playerId);
-            if (!p) {
-                cancelShotMiniHost();
-                return;
-            }
-
-            const dir = (playerId === myInfo.id)
-                ? getKickDirection()
-                : getRemotePlayerDirection(playerId);
-
-            const powerFactor = 1.6 + shotMini.meter * 4.8;
-            const perfectStart = shotMini.perfectStart;
-            const perfectEnd = shotMini.perfectStart + shotMini.perfectSize;
-            const isPerfect = shotMini.meter >= perfectStart && shotMini.meter <= perfectEnd;
-
-            if (isPerfect) {
-                dir.y += 0.08;
-                dir.normalize();
-            }
-
-            ballVelocity.copy(dir).multiplyScalar(powerFactor);
-            if (isPerfect) {
-                showGlobalEvent(`${shotMini.playerName} acertou um chute perfeito!`, 1200);
-            }
-            
-            updateLastTouch(playerId);
-            cancelShotMiniHost();
-        }
-
-        function updateShotMiniHost(dt) {
-            if (!shotMini.active) return;
-
-            shotMini.meter += shotMini.dir * shotMini.speed * dt;
-            shotMini.timeout -= dt;
-
-            if (shotMini.meter >= 1) {
-                shotMini.meter = 1;
-                shotMini.dir = -1;
-            } else if (shotMini.meter <= 0) {
-                shotMini.meter = 0;
-                shotMini.dir = 1;
-            }
-
-            if (shotMini.timeout <= 0) {
-                finishShotMiniHost(shotMini.playerId);
-                return;
-            }
-
-            const currentTime = performance.now();
-            if (currentTime - lastBroadcastAt > 50) {
-                broadcastShotMiniState();
-                lastBroadcastAt = currentTime;
-            }
-        }
-
-        function syncEmbaixadinhaUI() {
-            if (!juggle.active) {
-                emUI.style.display = 'none';
-                return;
-            }
-
-            const isMyJuggle = juggle.playerId === myInfo.id;
-            emUI.style.display = 'block';
-
-            const meterPct = juggle.meter * 100;
-            const zonePct = juggle.zoneStart * 100;
-            const zoneW = juggle.zoneSize * 100;
-
-            emZone.style.left = `${zonePct}%`;
-            emZone.style.width = `${zoneW}%`;
-            emMarker.style.left = `calc(${meterPct}% - 3px)`;
-            emCounter.textContent = `Contador: ${juggle.count}`;
-
-            if (isMyJuggle) {
-                emText.innerHTML = `Aperte <b>E</b> quando a barra branca estiver na zona verde.`;
-            } else {
-                emText.innerHTML = `<b>${juggle.playerName}</b> está fazendo embaixadinha.`;
-            }
-        }
-
-        function getPlayerNameById(id) {
-            if (id === myInfo.id) return myInfo.name;
-            const p = roomPlayers.find(p => p.id === id);
-            return p ? p.name : 'Jogador';
-        }
-
-        function getPlayerTeamById(id) {
-            if (id === myInfo.id) return myInfo.team;
-            const p = roomPlayers.find(p => p.id === id);
-            return p ? p.team : '';
-        }
-
-        function getPlayerPositionById(id) {
-            if (id === myInfo.id) return camera.position.clone();
-            if (networkMeshes[id]) return networkMeshes[id].mesh.position.clone();
-            return null;
-        }
-
-        function getRemotePlayerDirection(id) {
-            if (!networkMeshes[id]) {
-                const fallback = new THREE.Vector3(0, 0.28, 1);
-                return fallback.normalize();
-            }
-
-            const rotY = networkMeshes[id].mesh.rotation.y;
-            const dir = new THREE.Vector3(Math.sin(rotY), 0.30, Math.cos(rotY));
-            return dir.normalize();
-        }
-
-        function resetBallCenter() {
-            ball.position.set(0, 5, 0);
-            ballVelocity.set(0, 0, 0);
-            lastTouchTeam = null;
-            lastTouchName = '';
-            endJuggle('reset');
-            cancelShotMiniHost();
-        }
-
-        function broadcastJuggleState() {
-            const payload = {
-                type: 'juggleState',
-                juggle: {
-                    active: juggle.active,
-                    playerId: juggle.playerId,
-                    playerName: juggle.playerName,
-                    count: juggle.count,
-                    meter: juggle.meter,
-                    zoneStart: juggle.zoneStart,
-                    zoneSize: juggle.zoneSize
-                }
-            };
-
-            if (isHost) {
-                handleJuggleStateClient(payload.juggle);
-                broadcast(payload);
-            }
-        }
-
-        function handleJuggleStateClient(data) {
-            juggle.active = data.active;
-            juggle.playerId = data.playerId;
-            juggle.playerName = data.playerName || '';
-            juggle.count = data.count || 0;
-            juggle.meter = data.meter ?? 0.5;
-            juggle.zoneStart = data.zoneStart ?? 0.36;
-            juggle.zoneSize = data.zoneSize ?? 0.28;
-            syncEmbaixadinhaUI();
-        }
-
-        function startJuggleHost(playerId) {
-            if (juggle.active || shotMini.active) return false;
-
-            const playerName = getPlayerNameById(playerId);
-            const playerPos = getPlayerPositionById(playerId);
-            if (!playerPos) return false;
-
-            if (playerPos.distanceTo(ball.position) > 5.2) return false;
-            if (ball.position.y > 3.2) return false;
-
-            juggle.active = true;
-            juggle.playerId = playerId;
-            juggle.playerName = playerName;
-            juggle.count = 0;
-            juggle.meter = 0.5;
-            juggle.meterDir = 1;
-            juggle.zoneStart = 0.36;
-            juggle.zoneSize = 0.28;
-            juggle.speed = 0.95;
-            juggle.timeout = juggle.failGrace;
-            juggle.bounceTime = 0;
-
-            ballVelocity.set(0, 0, 0);
-            updateLastTouch(playerId);
-
-            broadcastJuggleState();
-            showGlobalEvent(`${playerName} começou a embaixadinha!`, 1800);
-            return true;
-        }
-
-        function endJuggle(reason = 'fail') {
-            if (!juggle.active) return;
-
-            const endedName = juggle.playerName;
-            const finalCount = juggle.count;
-
-            juggle.active = false;
-            juggle.playerId = null;
-            juggle.playerName = '';
-            juggle.count = 0;
-            juggle.bounceTime = 0;
-
-            if (reason === 'fail' && finalCount > 1) {
-                showGlobalEvent(`${endedName} parou em ${finalCount} embaixadinhas.`, 1800);
-            }
-
-            broadcastJuggleState();
-            syncEmbaixadinhaUI();
-        }
-
-        function hostProcessJuggleInput(playerId) {
-            if (!juggle.active) return;
-            if (juggle.playerId !== playerId) return;
-
-            const zoneEnd = juggle.zoneStart + juggle.zoneSize;
-            const inside = juggle.meter >= juggle.zoneStart && juggle.meter <= zoneEnd;
-
-            if (inside) {
-                juggle.count += 1;
-                juggle.timeout = juggle.failGrace;
-                juggle.bounceTime = 0;
-
-                juggle.speed = clamp(juggle.speed + 0.05, 0.95, 2.0);
-                juggle.zoneSize = clamp(juggle.zoneSize - 0.010, 0.12, 0.28);
-
-                const center = clamp(juggle.meter + (Math.random() * 0.28 - 0.14), 0.10, 0.90);
-                juggle.zoneStart = clamp(center - juggle.zoneSize / 2, 0.02, 0.98 - juggle.zoneSize);
-
-                showGlobalEvent(`${juggle.playerName}: ${juggle.count} embaixadinha${juggle.count > 1 ? 's' : ''}!`, 800);
-                broadcastJuggleState();
-            } else {
-                endJuggle('fail');
-            }
-        }
-
-        function executePassHost(playerId) {
-            cancelShotMiniHost();
-            if (juggle.active) endJuggle('fail');
-
-            const senderTeam = getPlayerTeamById(playerId);
-            let nearestAlly = null;
-            let minDistance = Infinity;
-
-            roomPlayers.forEach(p => {
-                if (p.id !== playerId && p.team === senderTeam) {
-                    const pos = getPlayerPositionById(p.id);
-                    if (pos) {
-                        const dist = pos.distanceTo(ball.position);
-                        if (dist < minDistance) {
-                            minDistance = dist;
-                            nearestAlly = p;
-                        }
-                    }
-                }
+        function createPlayerMesh(info) {
+            const sc = CHAR_DATA.find(x => x.id === info.char)?.stats.scale || 1.0;
+            const geo = new THREE.BoxGeometry(1.5 * sc, 3 * sc, 1.5 * sc);
+            const mat = new THREE.MeshLambertMaterial({
+                color: info.team === 'blue' ? 0x3b82f6 : 0x10b981
             });
 
-            if (nearestAlly) {
-                const targetPos = getPlayerPositionById(nearestAlly.id);
-                const dir = new THREE.Vector3().subVectors(targetPos, ball.position).normalize();
-                
-                // Força e altura do passe balanceados
-                ballVelocity.copy(dir).multiplyScalar(9);
-                ballVelocity.y = 1.5; 
-                showGlobalEvent(`Passe automático de ${getPlayerNameById(playerId)}!`, 1000);
-            } else {
-                const dir = playerId === myInfo.id ? getKickDirection() : getRemotePlayerDirection(playerId);
-                ballVelocity.copy(dir).multiplyScalar(8);
-            }
-            updateLastTouch(playerId);
+            new THREE.TextureLoader().load(info.char, tex => {
+                mat.map = tex;
+                mat.needsUpdate = true;
+            });
+
+            const mesh = new THREE.Mesh(geo, mat);
+            scene.add(mesh);
+
+            return {
+                mesh,
+                info,
+                targetPos: new THREE.Vector3(),
+                targetRotY: 0,
+                isStunned: false,
+                stunType: 'punch',
+                isBicycle: false
+            };
         }
 
-        function applyTouchImpulse(playerPos, playerId) {
-            if (juggle.active || shotMini.active) return;
+        function broadcastEvent(msg, color) {
+            showGlobalEvent(msg, color);
+            broadcast({ type: 'globalEvent', msg, color });
+        }
 
-            const toBall = new THREE.Vector3().subVectors(ball.position, playerPos);
-            const dist = Math.hypot(toBall.x, toBall.z);
-            if (dist > 2.9 || dist < 0.001) return;
+        function showGlobalEvent(msg, color = '#fff') {
+            globalEventText.textContent = msg;
+            globalEventText.style.color = color;
+            globalEventText.style.display = 'block';
+            clearTimeout(showGlobalEvent._t);
+            showGlobalEvent._t = setTimeout(() => globalEventText.style.display = 'none', 3500);
+        }
 
-            let pushForce = TOUCH_PUSH_FORCE;
-            if (playerPos.y > 2.2 && ball.position.y > 1.8) {
-                pushForce *= 1.8; 
-                toBall.y = -0.5; 
+        function applyCardLocal(cardType, reason) {
+            playSound('whistle');
+            isStunned = true;
+            myStunType = 'punch';
+            knockbackVel.set(0, 0, 0);
+
+            if (cardType === 'red') {
+                redCardTimer = 10;
+                stunTimer = 10;
+                document.getElementById('stunMessage').innerText = "CARTÃO VERMELHO!";
+                document.getElementById('stunOverlay').style.background = 'rgba(220, 38, 38, 0.4)';
+                camera.position.set(38, 2, (Math.random() - 0.5) * 20);
+                spawnExplosion(camera.position, myInfo.team, 50);
             } else {
-                toBall.y = 0;
+                redCardTimer = 5;
+                stunTimer = 5;
+                document.getElementById('stunMessage').innerText = "CARTÃO AMARELO!";
+                document.getElementById('stunOverlay').style.background = 'rgba(234, 179, 8, 0.4)';
+                spawnExplosion(camera.position, myInfo.team, 50);
             }
-            
-            toBall.normalize();
 
-            const push = (1 - dist / 2.9) * pushForce;
-            ballVelocity.x += toBall.x * push;
-            ballVelocity.z += toBall.z * push;
-            if (toBall.y !== 0) ballVelocity.y += toBall.y * push * 2;
-            
-            updateLastTouch(playerId);
+            shakeIntensity = 10;
+        }
+
+        function giveCard(playerId, cardType, reason) {
+            playSound('whistle');
+            if (playerId === myInfo.id) {
+                applyCardLocal(cardType, reason);
+            } else if (connections[playerId]) {
+                connections[playerId].send({ type: 'cardCmd', cardType, reason });
+            }
+
+            const color = cardType === 'red' ? '#ff0000' : '#facc15';
+            broadcastEvent(`FALTA! ${getPlayerName(playerId)} TOMOU CARTÃO POR ${reason}!`, color);
+        }
+
+        function triggerCaosEvent() {
+            if (!isHost || gameMode !== 'caos') return;
+            caosActive = true;
+            broadcastEvent("⚡ APAGÃO: O CAOS COMEÇOU!", "#facc15");
+            broadcast({ type: 'caosEvent', active: true });
+            applyCaos(true);
+
+            setTimeout(() => {
+                caosActive = false;
+                broadcast({ type: 'caosEvent', active: false });
+                applyCaos(false);
+            }, 7000);
+        }
+
+        function applyCaos(active) {
+            if (active) {
+                ambientLight.intensity = 0.05;
+                dirLight.intensity = 0.0;
+                ballLight.intensity = 2.0;
+                caosOverlay.style.display = 'block';
+            } else {
+                ambientLight.intensity = 0.35;
+                dirLight.intensity = 0.5;
+                ballLight.intensity = 0.0;
+                ball.material.emissive.setHex(0x000000);
+                caosOverlay.style.display = 'none';
+            }
+        }
+
+        function executeGabrielaSpecial(playerId) {
+            endHandballHost();
+            curveTimer = 0;
+            ballCurveForce.set(0, 0, 0);
+
+            const pTeam = getPlayerTeam(playerId);
+            const pPos = playerId === myInfo.id
+                ? camera.position.clone()
+                : (networkMeshes[playerId] ? networkMeshes[playerId].mesh.position.clone() : null);
+
+            if (!pPos) return;
+
+            const target = new THREE.Vector3(0, 1.7, pTeam === 'blue' ? 48 : -48);
+            const dir = new THREE.Vector3().subVectors(target, ball.position).normalize();
+
+            ballVelocity.copy(dir).multiplyScalar(16);
+            ballVelocity.y = 2.0;
+            trailMat.color.setHex(0xff00ff);
+
+            broadcastEvent(`${getPlayerName(playerId)} USOU O TELEGUIADO SUPREMO!`, '#ff66ff');
+            broadcast({ type: 'vfxCmd', typeVfx: 'curve', color: 0xff00ff });
+            playSound('kick');
+            shakeIntensity = 7;
+        }
+
+        function executeRafaSpecial(playerId) {
+            endHandballHost();
+            curveTimer = 0;
+            ballCurveForce.set(0, 0, 0);
+
+            const pTeam = getPlayerTeam(playerId);
+            const pPos = playerId === myInfo.id
+                ? camera.position.clone()
+                : (networkMeshes[playerId] ? networkMeshes[playerId].mesh.position.clone() : null);
+
+            if (!pPos) return;
+
+            const facingDir = new THREE.Vector3();
+
+            if (playerId === myInfo.id) {
+                camera.getWorldDirection(facingDir);
+            } else {
+                facingDir.set(0, 0, 1).applyAxisAngle(new THREE.Vector3(0, 1, 0), networkMeshes[playerId].mesh.rotation.y);
+            }
+
+            facingDir.y = -0.22;
+            facingDir.normalize();
+
+            ball.position.copy(pPos);
+            ball.position.y += 2.1;
+            ballVelocity.copy(facingDir).multiplyScalar(20);
+
+            broadcastEvent(`${getPlayerName(playerId)} USOU CABEÇADA MORTAL!`, '#facc15');
+            playSound('kick');
+            spawnExplosion(ball.position, pTeam, 45, 14, facingDir);
+            broadcast({ type: 'shakeCmd', val: 12 });
+            shakeIntensity = 12;
         }
 
         function handleNetworkData(senderId, data) {
-            if (!data || !data.type) return;
-
-            if (data.type === 'ping') {
-                if (isHost && connections[senderId]?.open) {
-                    connections[senderId].send({ type: 'pong', t: data.t });
-                }
-                return;
-            }
-
-            if (data.type === 'pong') {
-                pingMs = Date.now() - data.t;
-                return;
-            }
-
             if (isHost) {
                 switch (data.type) {
-                    case 'joinReq': {
-                        const exists = roomPlayers.some(p => p.id === data.player.id);
-                        if (!exists) {
+                    case 'joinReq':
+                        if (!roomPlayers.find(p => p.id === data.player.id)) {
                             roomPlayers.push({ ...data.player, isHost: false });
                             updatePlayerListUI();
-                            broadcast({ type: 'lobbySync', players: roomPlayers });
+                            broadcast({ type: 'lobbySync', players: roomPlayers, teams: teamNames, hasGk, gameMode });
                         }
                         break;
-                    }
 
-                    case 'updatePos': {
-                        if (!networkMeshes[senderId]) {
-                            const playerInfo = roomPlayers.find(p => p.id === senderId);
-                            if (playerInfo) networkMeshes[senderId] = createPlayerMesh(playerInfo);
-                        }
-
+                    case 'updatePos':
                         if (networkMeshes[senderId]) {
                             networkMeshes[senderId].targetPos.set(data.x, data.y, data.z);
                             networkMeshes[senderId].targetRotY = data.rotY;
+                            networkMeshes[senderId].isBicycle = data.isBicycle;
+                            networkMeshes[senderId].isStunned = data.isStunned;
+                            networkMeshes[senderId].stunType = data.stunType;
                         }
                         break;
-                    }
 
-                    case 'kick': {
-                        if (juggle.active) endJuggle('fail');
-                        cancelShotMiniHost();
-                        ballVelocity.set(data.dirX, data.dirY, data.dirZ).multiplyScalar(DIRECT_KICK_POWER);
-                        updateLastTouch(senderId);
+                    case 'kick':
+                        playSound('kick');
+                        endHandballHost();
+                        curveTimer = 0;
+                        ballCurveForce.set(0, 0, 0);
+                        ballVelocity.set(data.dirX, data.dirY, data.dirZ).normalize().multiplyScalar(8.2 * data.power);
+                        shakeIntensity = 4;
                         break;
-                    }
 
-                    case 'cavadinha': {
-                        if (juggle.active) endJuggle('fail');
-                        cancelShotMiniHost();
-                        const dir = new THREE.Vector3(data.dirX, data.dirY, data.dirZ);
-                        ballVelocity.copy(dir).multiplyScalar(DIRECT_KICK_POWER * 0.40);
-                        ballVelocity.y = 6.5; 
-                        updateLastTouch(senderId);
+                    case 'cavadinha':
+                        playSound('kick');
+                        endHandballHost();
+                        curveTimer = 0;
+                        ballCurveForce.set(0, 0, 0);
+                        ballVelocity.set(data.dirX, 0.85, data.dirZ).normalize().multiplyScalar(2.8 * data.power);
+                        ballVelocity.y = 6.2;
                         break;
-                    }
 
-                    case 'passReq': {
-                        executePassHost(senderId);
+                    case 'curveKick':
+                        playSound('kick');
+                        endHandballHost();
+                        ballVelocity.set(data.dirX, 0.35, data.dirZ).normalize().multiplyScalar(7.1 * data.power);
+                        ballVelocity.y = 4.2;
+                        ballCurveForce.set(data.curveX, 0, data.curveZ).multiplyScalar(10.5 * data.curveMult);
+                        curveTimer = 0.82;
+                        trailMat.color.setHex(data.color);
+                        broadcast({ type: 'vfxCmd', typeVfx: 'curve', color: data.color });
                         break;
-                    }
+
+                    case 'bicicleta':
+                        playSound('kick');
+                        endHandballHost();
+                        curveTimer = 0;
+                        ballCurveForce.set(0, 0, 0);
+                        ballVelocity.set(0, 2.0, 0);
+                        setTimeout(() => {
+                            ballVelocity.set(data.dirX, 0, data.dirZ).normalize().multiplyScalar(15.5 * data.power);
+                            shakeIntensity = 8;
+                            broadcast({ type: 'shakeCmd', val: 8 });
+                        }, 400);
+                        break;
+
+                    case 'rafaSpecial':
+                        executeRafaSpecial(senderId);
+                        break;
+
+                    case 'gabSpecial':
+                        executeGabrielaSpecial(senderId);
+                        break;
+
+                    case 'passReq':
+                        executeAutoPassHost(senderId);
+                        break;
+
+                    case 'startSlide':
+                        slidingPlayersHost[senderId] = 0.35;
+                        break;
 
                     case 'punchReq': {
-                        const pPos = getPlayerPositionById(senderId);
-                        const pTeam = getPlayerTeamById(senderId);
+                        playSound('hit');
+                        const pPos = networkMeshes[senderId] ? networkMeshes[senderId].mesh.position : new THREE.Vector3();
+                        let hitSomeone = false;
 
-                        roomPlayers.forEach(other => {
-                            if (other.id !== senderId && other.team !== pTeam) {
-                                const oPos = getPlayerPositionById(other.id);
-                                if (oPos && pPos.distanceTo(oPos) < 3.5) {
-                                    const dir = new THREE.Vector3().subVectors(oPos, pPos).normalize();
-                                    
-                                    if (other.id === myInfo.id) {
-                                        applyLocalPunch(dir);
-                                    } else {
-                                        const conn = connections[other.id];
-                                        if (conn && conn.open) conn.send({ type: 'punchedCmd', dx: dir.x, dz: dir.z });
-                                        stunnedPlayers[other.id] = 1.8;
-                                    }
-                                    showGlobalEvent(`${getPlayerNameById(senderId)} deu um murro em ${other.name}!`, 2000);
-                                }
+                        for (let id in networkMeshes) {
+                            if (id !== senderId && networkMeshes[id].mesh.position.distanceTo(pPos) < 4) {
+                                const dir = new THREE.Vector3().subVectors(networkMeshes[id].mesh.position, pPos).normalize();
+                                connections[id].send({ type: 'stunCmd', time: 1.8, stunType: 'punch', dirX: dir.x, dirZ: dir.z });
+                                hitSomeone = true;
                             }
-                        });
-                        break;
-                    }
-
-                    case 'stopBall': {
-                        if (juggle.active) endJuggle('fail');
-                        cancelShotMiniHost();
-                        ballVelocity.set(0, 0, 0);
-                        break;
-                    }
-
-                    case 'startJuggleReq': {
-                        startJuggleHost(senderId);
-                        break;
-                    }
-
-                    case 'juggleInput': {
-                        if (data.cancel) {
-                            if (juggle.active && juggle.playerId === senderId) endJuggle('fail');
-                        } else {
-                            hostProcessJuggleInput(senderId);
                         }
+
+                        if (camera.position.distanceTo(pPos) < 4) {
+                            const dir = new THREE.Vector3().subVectors(camera.position, pPos).normalize();
+                            isStunned = true;
+                            stunTimer = 1.8;
+                            myStunType = 'punch';
+                            hitSomeone = true;
+                            knockbackVel.set(dir.x * 25, 5, dir.z * 25);
+                            document.getElementById('stunMessage').innerText = "DERRUBADO!";
+                        }
+
+                        if (hitSomeone && refLooking) giveCard(senderId, 'red', 'SOCO');
                         break;
                     }
 
-                    case 'startShotMiniReq': {
-                        startShotMiniHost(senderId);
+                    case 'startHbReq':
+                        startHandballHost(senderId);
                         break;
-                    }
 
-                    case 'finishShotMiniReq': {
-                        finishShotMiniHost(senderId);
+                    case 'hbInput':
+                        if (data.cancel) endHandballHost();
+                        else hostProcessHbInput(senderId);
                         break;
-                    }
-
-                    case 'startSlide': {
-                        slidingPlayers[senderId] = 0.35; 
-                        break;
-                    }
                 }
             } else {
                 switch (data.type) {
                     case 'lobbySync':
                         roomPlayers = data.players;
+                        teamNames = data.teams;
+                        hasGk = data.hasGk;
+                        gameMode = data.gameMode;
                         updatePlayerListUI();
                         break;
 
@@ -1389,501 +1345,547 @@
                         break;
 
                     case 'gameState':
-                        handleGameStateFromHost(data);
+                        handleGameState(data);
                         break;
 
-                    case 'juggleState':
-                        handleJuggleStateClient(data.juggle);
+                    case 'stunCmd': {
+                        playSound('hit');
+                        isStunned = true;
+                        stunTimer = data.time || 1.8;
+                        myStunType = data.stunType || 'punch';
+                        document.getElementById('stunMessage').innerText = "DERRUBADO!";
+                        const f = myStunType === 'punch' ? 25 : 10;
+                        const up = myStunType === 'punch' ? 5 : 15;
+                        knockbackVel.set(data.dirX * f, up, data.dirZ * f);
+                        break;
+                    }
+
+                    case 'cardCmd':
+                        applyCardLocal(data.cardType, data.reason);
                         break;
 
-                    case 'shotMiniState':
-                        handleShotMiniClient(data.shotMini);
+                    case 'shakeCmd':
+                        shakeIntensity = data.val;
                         break;
-                    
-                    case 'stunCmd':
-                        if (data.targetId === myInfo.id) {
-                            isStunned = true;
-                            stunTimer = 1.8;
-                            isSliding = false;
-                            isJumping = false;
-                            showGlobalEvent('VOCÊ FOI DERRUBADO!', 2000);
-                        }
+
+                    case 'soundCmd':
+                        playSound(data.sound);
                         break;
-                        
-                    case 'punchedCmd':
-                        const punchDir = new THREE.Vector3(data.dx, 0, data.dz);
-                        applyLocalPunch(punchDir);
+
+                    case 'globalEvent':
+                        showGlobalEvent(data.msg, data.color);
+                        break;
+
+                    case 'caosEvent':
+                        applyCaos(data.active);
+                        break;
+
+                    case 'hbState':
+                        syncHbClient(data.hb);
+                        break;
+
+                    case 'vfxCmd':
+                        if (data.typeVfx === 'goal') triggerGoalVFX(data.pos, data.team);
+                        else if (data.typeVfx === 'curve') trailMat.color.setHex(data.color);
+                        else if (data.typeVfx === 'normal') trailMat.color.setHex(getTeamColor(data.team));
                         break;
                 }
             }
         }
-        
-        function applyLocalPunch(dir) {
-            isStunned = true;
-            stunTimer = 1.8;
-            isSliding = false;
-            isJumping = false;
-            
-            punchVx = dir.x * 22; // Força horizontal do voo
-            punchVy = 10;         // Força vertical do voo
-            punchVz = dir.z * 22;
-            
-            showGlobalEvent('VOCÊ TOMOU UM MURRO!', 2000);
-        }
 
-        function handleGameStateFromHost(data) {
-            ball.position.set(data.ball.x, data.ball.y, data.ball.z);
-            ballVelocity.set(data.ball.vx || 0, data.ball.vy || 0, data.ball.vz || 0);
+        function handleGameState(data) {
+            targetBallPos.set(data.ball.x, data.ball.y, data.ball.z);
+            ballVelocity.set(data.ball.vx, data.ball.vy, data.ball.vz);
 
             placar1 = data.score1;
             placar2 = data.score2;
             document.getElementById('score1').innerText = placar1;
             document.getElementById('score2').innerText = placar2;
 
-            if (data.juggle) handleJuggleStateClient(data.juggle);
-            if (data.shotMini) handleShotMiniClient(data.shotMini);
+            refLooking = data.refLooking;
+            if (refLooking) {
+                eyeMat.color.setHex(0xff0000);
+                refStatus.style.display = 'block';
+            } else {
+                eyeMat.color.setHex(0x110000);
+                refStatus.style.display = 'none';
+            }
 
-            for (const id in data.positions) {
+            judgeGroup.rotation.y += 0.02;
+
+            if (hasGk) {
+                if (!scene.children.includes(gkBlue)) {
+                    scene.add(gkBlue);
+                    scene.add(gkGreen);
+                }
+                gkBlue.position.x = data.gk.bX;
+                gkGreen.position.x = data.gk.gX;
+            }
+
+            const positions = data.positions || {};
+            for (const id in positions) {
                 if (id === myInfo.id) continue;
+                const pInfo = roomPlayers.find(p => p.id === id);
+                if (!pInfo) continue;
+                if (!networkMeshes[id]) networkMeshes[id] = createPlayerMesh(pInfo);
 
-                if (!networkMeshes[id]) {
-                    const playerInfo = roomPlayers.find(p => p.id === id);
-                    if (playerInfo) networkMeshes[id] = createPlayerMesh(playerInfo);
-                }
-
-                const posData = data.positions[id];
-                if (networkMeshes[id]) {
-                    networkMeshes[id].targetPos.set(posData.x, posData.y, posData.z);
-                    networkMeshes[id].targetRotY = posData.rotY;
-                    networkMeshes[id].isStunned = posData.isStunned;
-                }
+                networkMeshes[id].targetPos.set(positions[id].x, positions[id].y, positions[id].z);
+                networkMeshes[id].targetRotY = positions[id].rotY;
+                networkMeshes[id].isStunned = positions[id].stun;
+                networkMeshes[id].stunType = positions[id].stunType;
+                networkMeshes[id].isBicycle = positions[id].bic;
             }
         }
 
         document.getElementById('btnStartGame').onclick = () => {
-            if (!isHost || hasGameStarted) return;
-            broadcast({ type: 'startGameCmd' });
-            buildGameScene();
+            if (isHost) {
+                broadcast({ type: 'startGameCmd' });
+                buildGameScene();
+            }
         };
 
         function buildGameScene() {
-            if (hasGameStarted) return;
             hasGameStarted = true;
-
             uiWaiting.style.display = 'none';
             uiGame.style.display = 'block';
 
-            if (!renderer.domElement.parentNode) {
-                document.body.appendChild(renderer.domElement);
-            }
+            if (!renderer.domElement.parentNode) document.body.appendChild(renderer.domElement);
 
-            const isBlue = myInfo.team === 'blue';
-            const myStartZ = isBlue ? 28 : -28; 
-            const myStartX = (Math.random() - 0.5) * 18;
+            document.getElementById('nameBlue').innerText = teamNames.blue;
+            document.getElementById('nameGreen').innerText = teamNames.green;
 
-            camera.position.set(myStartX, 2, myStartZ);
-            yaw = isBlue ? Math.PI : 0;
-            pitch = 0;
-            camera.rotation.set(0, 0, 0);
-            camera.rotateY(yaw);
+            camera.position.set((Math.random() - 0.5) * 10, 2, myInfo.team === 'blue' ? 20 : -20);
+            yaw = myInfo.team === 'blue' ? Math.PI : 0;
 
-            roomPlayers.forEach((p) => {
-                if (p.id !== myInfo.id && !networkMeshes[p.id]) {
-                    networkMeshes[p.id] = createPlayerMesh(p);
-                }
+            roomPlayers.forEach(p => {
+                if (p.id !== myInfo.id && !networkMeshes[p.id]) networkMeshes[p.id] = createPlayerMesh(p);
             });
 
-            if (isHost) {
-                resetBallCenter();
-                if (gameStateInterval) clearInterval(gameStateInterval);
-                gameStateInterval = setInterval(broadcastGameState, 1000 / 24);
-            } else {
-                if (sendPosInterval) clearInterval(sendPosInterval);
-                sendPosInterval = setInterval(sendMyPositionIfNeeded, 1000 / 20);
+            if (hasGk && isHost) {
+                if (!scene.children.includes(gkBlue)) scene.add(gkBlue);
+                if (!scene.children.includes(gkGreen)) scene.add(gkGreen);
             }
 
-            syncEmbaixadinhaUI();
-            updateShotMiniUI();
+            if (isHost) setInterval(broadcastGameState, 1000 / 30);
+            else setInterval(sendMyPosition, 1000 / 30);
+
+            lastTime = now();
             animate();
         }
 
         function broadcastGameState() {
-            if (!isHost) return;
-
             const posData = {};
             posData[myInfo.id] = {
                 x: camera.position.x,
                 y: camera.position.y,
                 z: camera.position.z,
                 rotY: yaw,
-                isStunned: isStunned
+                stun: isStunned,
+                stunType: myStunType,
+                bic: isDoingBicycle
             };
 
             for (const id in networkMeshes) {
-                const p = networkMeshes[id].mesh;
+                const m = networkMeshes[id];
                 posData[id] = {
-                    x: p.position.x,
-                    y: p.position.y,
-                    z: p.position.z,
-                    rotY: p.rotation.y,
-                    isStunned: stunnedPlayers[id] > 0
+                    x: m.mesh.position.x,
+                    y: m.mesh.position.y,
+                    z: m.mesh.position.z,
+                    rotY: m.mesh.rotation.y,
+                    stun: m.isStunned,
+                    stunType: m.stunType,
+                    bic: m.isBicycle
                 };
             }
 
             broadcast({
                 type: 'gameState',
                 ball: {
-                    x: ball.position.x,
-                    y: ball.position.y,
-                    z: ball.position.z,
-                    vx: ballVelocity.x,
-                    vy: ballVelocity.y,
-                    vz: ballVelocity.z
+                    x: ball.position.x, y: ball.position.y, z: ball.position.z,
+                    vx: ballVelocity.x, vy: ballVelocity.y, vz: ballVelocity.z
                 },
-                positions: posData,
+                gk: { bX: gkBlue.position.x, gX: gkGreen.position.x },
                 score1: placar1,
                 score2: placar2,
-                juggle: {
-                    active: juggle.active,
-                    playerId: juggle.playerId,
-                    playerName: juggle.playerName,
-                    count: juggle.count,
-                    meter: juggle.meter,
-                    zoneStart: juggle.zoneStart,
-                    zoneSize: juggle.zoneSize
-                },
-                shotMini: {
-                    active: shotMini.active,
-                    playerId: shotMini.playerId,
-                    playerName: shotMini.playerName,
-                    meter: shotMini.meter
-                }
+                refLooking,
+                positions: posData
             });
         }
 
-        function sendMyPositionIfNeeded() {
-            if (isHost || !hostConnection || !hostConnection.open) return;
-
-            const rotY = yaw;
-            const p = camera.position;
-
-            const moved =
-                Math.abs(p.x - lastMoveSent.x) > 0.03 ||
-                Math.abs(p.y - lastMoveSent.y) > 0.03 ||
-                Math.abs(p.z - lastMoveSent.z) > 0.03 ||
-                Math.abs(rotY - lastMoveSent.rotY) > 0.02;
-
-            if (!moved) return;
-
-            hostConnection.send({
-                type: 'updatePos',
-                x: p.x,
-                y: p.y,
-                z: p.z,
-                rotY
-            });
-
-            lastMoveSent = { x: p.x, y: p.y, z: p.z, rotY };
-        }
-
-        function setKeyByCode(code, pressed) {
-            switch (code) {
-                case 'KeyW': keys.w = pressed; break;
-                case 'KeyA': keys.a = pressed; break;
-                case 'KeyS': keys.s = pressed; break;
-                case 'KeyD': keys.d = pressed; break;
-                case 'KeyE': keys.e = pressed; break;
-                case 'KeyF': keys.f = pressed; break;
-                case 'KeyC': keys.c = pressed; break;
-                case 'KeyR': keys.r = pressed; break;
-                case 'KeyG': keys.g = pressed; break;
-                case 'Space': keys.space = pressed; break;
-                case 'ShiftLeft':
-                case 'ShiftRight':
-                    keys.shift = pressed;
-                    break;
-            }
-        }
-
-        document.addEventListener('keydown', (e) => {
-            const wasEPressed = keys.e;
-            const wasFPressed = keys.f;
-            const wasRPressed = keys.r;
-            const wasGPressed = keys.g;
-
-            setKeyByCode(e.code, true);
-
-            if (e.code === 'KeyE' && !wasEPressed) onPressE();
-            if (e.code === 'KeyF' && !wasFPressed) onPressF();
-            if (e.code === 'KeyR' && !wasRPressed) onPressR();
-            if (e.code === 'KeyG' && !wasGPressed) onPressG();
-        });
-
-        document.addEventListener('keyup', (e) => {
-            setKeyByCode(e.code, false);
-        });
-
-        function onPressE() {
-            if (!hasGameStarted) return;
-            if (document.pointerLockElement !== document.body) return;
-            if (shotMini.active || isStunned) return;
-
-            if (juggle.active) {
-                if (juggle.playerId === myInfo.id) {
-                    if (isHost) hostProcessJuggleInput(myInfo.id);
-                    else if (hostConnection && hostConnection.open) hostConnection.send({ type: 'juggleInput' });
-                }
-                return;
-            }
-
-            const nearBall = camera.position.distanceTo(ball.position) <= 5.2;
-            if (!nearBall) return;
-
-            if (isHost) startJuggleHost(myInfo.id);
-            else if (hostConnection && hostConnection.open) hostConnection.send({ type: 'startJuggleReq' });
-        }
-
-        function onPressF() {
-            if (!hasGameStarted) return;
-            if (document.pointerLockElement !== document.body) return;
-            if (juggle.active || isStunned) return;
-
-            const nearBall = camera.position.distanceTo(ball.position) <= 6.0;
-            if (!nearBall) return;
-
-            if (shotMini.active) {
-                if (shotMini.playerId !== myInfo.id) return;
-
-                if (isHost) finishShotMiniHost(myInfo.id);
-                else if (hostConnection && hostConnection.open) hostConnection.send({ type: 'finishShotMiniReq' });
-            } else {
-                if (isHost) startShotMiniHost(myInfo.id);
-                else if (hostConnection && hostConnection.open) hostConnection.send({ type: 'startShotMiniReq' });
-            }
-        }
-
-        function onPressR() {
-            if (!hasGameStarted) return;
-            if (document.pointerLockElement !== document.body) return;
-            if (juggle.active || shotMini.active || isStunned) return;
-
-            const nearBall = camera.position.distanceTo(ball.position) <= 7.5;
-            if (!nearBall) return;
-
-            if (isHost) executePassHost(myInfo.id);
-            else if (hostConnection && hostConnection.open) hostConnection.send({ type: 'passReq' });
-        }
-
-        function onPressG() {
-            if (!hasGameStarted) return;
-            if (document.pointerLockElement !== document.body) return;
-            if (isStunned || isSliding) return;
-            
-            if (isHost) {
-                const pPos = getPlayerPositionById(myInfo.id);
-                const pTeam = getPlayerTeamById(myInfo.id);
-
-                roomPlayers.forEach(other => {
-                    if (other.id !== myInfo.id && other.team !== pTeam) {
-                        const oPos = getPlayerPositionById(other.id);
-                        if (oPos && pPos.distanceTo(oPos) < 3.5) {
-                            const dir = new THREE.Vector3().subVectors(oPos, pPos).normalize();
-                            
-                            const conn = connections[other.id];
-                            if (conn && conn.open) conn.send({ type: 'punchedCmd', dx: dir.x, dz: dir.z });
-                            stunnedPlayers[other.id] = 1.8;
-                            
-                            showGlobalEvent(`${myInfo.name} deu um murro em ${other.name}!`, 2000);
-                        }
-                    }
+        function sendMyPosition() {
+            if (hostConnection?.open) {
+                hostConnection.send({
+                    type: 'updatePos',
+                    x: camera.position.x,
+                    y: camera.position.y,
+                    z: camera.position.z,
+                    rotY: yaw,
+                    isBicycle: isDoingBicycle,
+                    isStunned,
+                    stunType: myStunType
                 });
-            } else if (hostConnection && hostConnection.open) {
-                hostConnection.send({ type: 'punchReq' });
             }
         }
 
-        lockOverlay.addEventListener('mousedown', () => {
-            document.body.requestPointerLock();
-        });
+        function setKey(e, val) {
+            let code = e.code.toLowerCase();
+            if (code.includes('shift')) code = 'shift';
+            else code = code.replace('key', '');
 
-        document.addEventListener('pointerlockchange', () => {
-            if (document.pointerLockElement === document.body) {
-                lockOverlay.style.display = 'none';
-            } else if (uiGame.style.display === 'block') {
-                lockOverlay.style.display = 'flex';
+            const wasF = keys.f;
+            const wasQ = keys.q;
+            const wasE = keys.e;
+            const wasR = keys.r;
+            const wasX = keys.x;
+
+            keys[code] = val;
+
+            if (code === 'f' && val && !wasF) triggerHandball();
+            if (code === 'q' && val && !wasQ) triggerCurva(-1);
+            if (code === 'e' && val && !wasE) triggerCurva(1);
+            if (code === 'r' && val && !wasR) triggerPass();
+            if (code === 'x' && val && !wasX) triggerSpecial();
+        }
+
+        document.addEventListener('keydown', e => setKey(e, true));
+        document.addEventListener('keyup', e => setKey(e, false));
+
+        function triggerSpecial() {
+            if (!hasGameStarted || document.pointerLockElement !== document.body || isStunned || isDoingBicycle) return;
+            if (camera.position.distanceTo(ball.position) > 7) return;
+            if (stamina < 90) return;
+
+            keys.x = false;
+            stamina = 0;
+
+            if (myInfo.char === 'rafa.png') {
+                if (isHost) executeRafaSpecial(myInfo.id);
+                else hostConnection.send({ type: 'rafaSpecial' });
+
+                playerVy = 10;
+                isJumping = true;
+            } else if (myInfo.char === 'gabriela.png') {
+                if (isHost) executeGabrielaSpecial(myInfo.id);
+                else hostConnection.send({ type: 'gabSpecial' });
             }
+        }
+
+        function triggerHandball() {
+            if (!hasGameStarted || document.pointerLockElement !== document.body || isStunned) return;
+
+            if (handball.active) {
+                if (handball.playerId === myInfo.id) {
+                    if (isHost) hostProcessHbInput(myInfo.id);
+                    else hostConnection.send({ type: 'hbInput' });
+                }
+            } else if (camera.position.distanceTo(ball.position) <= 5.5) {
+                if (isHost) startHandballHost(myInfo.id);
+                else hostConnection.send({ type: 'startHbReq' });
+            }
+        }
+
+        function triggerCurva(direction) {
+            if (!hasGameStarted || document.pointerLockElement !== document.body || isStunned || isDoingBicycle || camera.position.distanceTo(ball.position) > 7.5) return;
+
+            if (handball.active) {
+                if (isHost) endHandballHost();
+                else hostConnection.send({ type: 'hbInput', cancel: true });
+            }
+
+            const dir = new THREE.Vector3();
+            camera.getWorldDirection(dir);
+            dir.y = 0;
+            dir.normalize();
+
+            const curveDir = new THREE.Vector3().crossVectors(dir, camera.up).normalize().multiplyScalar(direction);
+            const power = getMyPower('kick');
+            const curveMult = getMyPower('curve');
+            const color = direction === 1 ? 0xff00ff : 0x00ffff;
+
+            playSound('kick');
+            if (!isHost) hostConnection.send({ type: 'soundCmd', sound: 'kick' });
+
+            if (isHost) {
+                endHandballHost();
+                ballVelocity.set(dir.x, 0.35, dir.z).normalize().multiplyScalar(7.1 * power);
+                ballVelocity.y = 4.2;
+                ballCurveForce.copy(curveDir).multiplyScalar(10.5 * curveMult);
+                curveTimer = 0.82;
+                trailMat.color.setHex(color);
+                broadcast({ type: 'vfxCmd', typeVfx: 'curve', color });
+            } else {
+                hostConnection.send({
+                    type: 'curveKick',
+                    dirX: dir.x,
+                    dirZ: dir.z,
+                    curveX: curveDir.x,
+                    curveZ: curveDir.z,
+                    power,
+                    curveMult,
+                    color
+                });
+            }
+        }
+
+        function triggerPass() {
+            if (!hasGameStarted || document.pointerLockElement !== document.body || isStunned || isDoingBicycle || camera.position.distanceTo(ball.position) > 7.5) return;
+
+            playSound('kick');
+            if (!isHost) hostConnection.send({ type: 'soundCmd', sound: 'kick' });
+
+            if (isHost) executeAutoPassHost(myInfo.id);
+            else hostConnection.send({ type: 'passReq' });
+        }
+
+        function executeAutoPassHost(senderId) {
+            endHandballHost();
+            curveTimer = 0;
+            ballCurveForce.set(0, 0, 0);
+
+            const senderPos = senderId === myInfo.id
+                ? camera.position
+                : (networkMeshes[senderId] ? networkMeshes[senderId].mesh.position : null);
+            const senderTeam = getPlayerTeam(senderId);
+            if (!senderPos) return;
+
+            let bestTarget = null;
+            let bestDist = Infinity;
+
+            if (myInfo.team === senderTeam && senderId !== myInfo.id) {
+                const d = senderPos.distanceTo(camera.position);
+                if (d < bestDist) {
+                    bestDist = d;
+                    bestTarget = camera.position;
+                }
+            }
+
+            for (let id in networkMeshes) {
+                if (id !== senderId && getPlayerTeam(id) === senderTeam) {
+                    const d = senderPos.distanceTo(networkMeshes[id].mesh.position);
+                    if (d < bestDist) {
+                        bestDist = d;
+                        bestTarget = networkMeshes[id].mesh.position;
+                    }
+                }
+            }
+
+            const dir = new THREE.Vector3();
+            if (bestTarget) {
+                dir.subVectors(bestTarget, ball.position).normalize();
+                showGlobalEvent("PASSE AUTOMÁTICO!", "#00ff00");
+            } else {
+                if (senderId === myInfo.id) camera.getWorldDirection(dir);
+                else dir.set(0, 0, 1);
+                dir.normalize();
+            }
+
+            ballVelocity.set(dir.x, 0.1, dir.z).normalize().multiplyScalar(11.5 * getMyPower('kick'));
+            ballVelocity.y = 1.2;
+            trailMat.color.setHex(getTeamColor(senderTeam));
+            broadcast({ type: 'vfxCmd', typeVfx: 'normal', team: senderTeam });
+        }
+
+        lockOverlay.addEventListener('mousedown', () => document.body.requestPointerLock());
+        document.addEventListener('pointerlockchange', () => {
+            lockOverlay.style.display = document.pointerLockElement ? 'none' : 'flex';
         });
 
         document.addEventListener('mousemove', (e) => {
-            if (document.pointerLockElement !== document.body) return;
-
+            if (document.pointerLockElement !== document.body || isStunned) return;
             yaw -= e.movementX * 0.0022;
-            pitch -= e.movementY * 0.0022;
-            pitch = clamp(pitch, -Math.PI / 2.2, Math.PI / 2.2);
-
-            camera.rotation.set(0, 0, 0);
-            camera.rotateY(yaw);
-            camera.rotateX(pitch);
-            
-            if (isStunned) camera.rotateZ(Math.PI / 2);
+            if (!isDoingBicycle) pitch = clamp(pitch - e.movementY * 0.0022, -Math.PI / 2.2, Math.PI / 2.2);
         });
 
         document.addEventListener('mousedown', (e) => {
-            if (document.pointerLockElement !== document.body) return;
-            if (!hasGameStarted || isStunned) return;
+            if (document.pointerLockElement !== document.body || isStunned || isDoingBicycle || camera.position.distanceTo(ball.position) > 7.5) return;
 
-            const nearBall = camera.position.distanceTo(ball.position) <= 7.5;
-            if (!nearBall) return;
-
-            const dir = getKickDirection();
-
-            // Chute Forte (M1)
-            if (e.button === 0) {
-                if (juggle.active) {
-                    if (isHost) endJuggle('fail');
-                    else if (hostConnection && hostConnection.open) hostConnection.send({ type: 'juggleInput', cancel: true });
-                }
-
-                if (shotMini.active) {
-                    if (isHost) cancelShotMiniHost();
-                    else if (hostConnection && hostConnection.open) hostConnection.send({ type: 'finishShotMiniReq' });
-                }
-
-                if (isHost) {
-                    ballVelocity.copy(dir).multiplyScalar(DIRECT_KICK_POWER);
-                    updateLastTouch(myInfo.id);
-                } else if (hostConnection && hostConnection.open) {
-                    hostConnection.send({ type: 'kick', dirX: dir.x, dirY: dir.y, dirZ: dir.z });
-                }
+            if (handball.active) {
+                if (isHost) endHandballHost();
+                else hostConnection.send({ type: 'hbInput', cancel: true });
             }
 
-            // Cavadinha (M2)
-            if (e.button === 2) {
-                if (juggle.active && isHost) endJuggle('fail');
-                if (shotMini.active && isHost) cancelShotMiniHost();
+            const dir = new THREE.Vector3();
+            camera.getWorldDirection(dir);
+            dir.y = 0;
+            dir.normalize();
 
-                if (isHost) {
-                    ballVelocity.copy(dir).multiplyScalar(DIRECT_KICK_POWER * 0.40);
-                    ballVelocity.y = 6.5; 
-                    updateLastTouch(myInfo.id);
-                } else if (hostConnection && hostConnection.open) {
-                    hostConnection.send({ type: 'cavadinha', dirX: dir.x, dirY: dir.y, dirZ: dir.z });
+            playSound('kick');
+            if (!isHost) hostConnection.send({ type: 'soundCmd', sound: 'kick' });
+
+            const power = getMyPower('kick');
+
+            if (isHost) {
+                curveTimer = 0;
+                ballCurveForce.set(0, 0, 0);
+                trailMat.color.setHex(getTeamColor(myInfo.team));
+                broadcast({ type: 'vfxCmd', typeVfx: 'normal', team: myInfo.team });
+
+                if (e.button === 2) {
+                    ballVelocity.set(dir.x, 0.30, dir.z).normalize().multiplyScalar(2.8 * power);
+                    ballVelocity.y = 6.2;
+                } else {
+                    ballVelocity.set(dir.x, 0.30, dir.z).normalize().multiplyScalar(8.2 * power);
+                    shakeIntensity = 4;
                 }
+            } else {
+                hostConnection.send({
+                    type: e.button === 2 ? 'cavadinha' : 'kick',
+                    dirX: dir.x,
+                    dirY: dir.y,
+                    dirZ: dir.z,
+                    power
+                });
             }
         });
 
-        let lastFrame = now();
-        let animating = false;
+        let lastTime = now();
 
         function animate() {
-            if (animating) return;
-            animating = true;
+            requestAnimationFrame(animate);
+            if (!hasGameStarted) return;
 
-            function frame() {
-                if (!hasGameStarted) {
-                    animating = false;
-                    return;
-                }
+            const t = now();
+            const dt = Math.min((t - lastTime) / 1000, 0.033);
+            lastTime = t;
 
-                requestAnimationFrame(frame);
+            updateLocalPlayer(dt);
+            if (isHost) updateHostPhysics(dt);
+            updateVisuals(dt);
 
-                const t = now();
-                let dt = (t - lastFrame) / 1000;
-                lastFrame = t;
-                dt = Math.min(dt, 0.033);
-
-                updateLocalPlayer(dt);
-                updateRemotePlayers(dt);
-
-                if (isHost) {
-                    updateHostPhysicsAndBall(dt);
-                    updateJuggleHost(dt);
-                    updateShotMiniHost(dt);
-                }
-
-                updateBallSpin(dt);
-                syncEmbaixadinhaUI();
-                updateShotMiniUI();
-
-                netStats.textContent = `NET: ${pingMs || '--'} ms`;
-                renderer.render(scene, camera);
-            }
-
-            lastFrame = now();
-            requestAnimationFrame(frame);
+            renderer.render(scene, camera);
         }
 
         function updateLocalPlayer(dt) {
             if (slideCooldown > 0) slideCooldown -= dt;
 
-            // FÍSICA DE STUN / MURRO / QUEDA
             if (isStunned) {
                 stunTimer -= dt;
                 stunOverlay.style.display = 'flex';
-                
-                // Aplica Knockback físico se tomou murro
-                punchVy -= 25 * dt; // Gravidade no ar
-                camera.position.x += punchVx * dt;
-                camera.position.y += punchVy * dt;
-                camera.position.z += punchVz * dt;
-                
-                // Atrito no ar
-                punchVx *= 0.95; 
-                punchVz *= 0.95;
-                
-                // Bateu no chão
-                if (camera.position.y <= 0.5) {
-                    camera.position.y = 0.5;
-                    punchVy = 0;
-                    punchVx *= 0.8; // Atrito forte no chão
-                    punchVz *= 0.8;
+
+                if (redCardTimer > 0) {
+                    redCardTimer -= dt;
+                    document.getElementById('redCardTimer').innerText = Math.ceil(redCardTimer) + "s";
+                } else {
+                    document.getElementById('redCardTimer').innerText = "";
                 }
 
-                camera.rotation.set(0, 0, 0);
-                camera.rotateY(yaw);
-                camera.rotateX(pitch);
-                camera.rotateZ(Math.PI / 2); // Deitado
-                
-                // Limita mapa pra não voar pra fora
-                camera.position.x = clamp(camera.position.x, -fieldWidth / 2 + 1, fieldWidth / 2 - 1);
-                camera.position.z = clamp(camera.position.z, -fieldLength / 2 + 1, fieldLength / 2 - 1);
+                knockbackVel.y -= 30 * dt;
+                camera.position.addScaledVector(knockbackVel, dt);
+
+                if (camera.position.y < 1.0) {
+                    camera.position.y = 1.0;
+                    knockbackVel.y = 0;
+                    knockbackVel.x *= 0.8;
+                    knockbackVel.z *= 0.8;
+                }
+
+                if (myStunType === 'slide') {
+                    pitch += 12 * dt;
+                    yaw += 15 * dt;
+                    camera.rotation.set(pitch, yaw, 0);
+                } else {
+                    camera.rotation.set(Math.PI / 2, yaw, 0);
+                }
 
                 if (stunTimer <= 0) {
                     isStunned = false;
                     stunOverlay.style.display = 'none';
-                    camera.rotation.z = 0;
-                    punchVx = 0;
-                    punchVy = 0;
-                    punchVz = 0;
+                    redCardTimer = 0;
+                    pitch = 0;
+                    knockbackVel.set(0, 0, 0);
                 }
-                return; 
+                return;
             }
 
-            // Carrinho
-            if (keys.c && !isSliding && stamina >= 20 && !isJumping && slideCooldown <= 0) {
+            const pSpeed = getMyPower('speed');
+            const pJump = getMyPower('jump');
+            const pStmMax = getMyPower('stmMax') * 200;
+            const pStmRegen = getMyPower('stmRegen') * 30;
+
+            if (keys.v && !isDoingBicycle && !isJumping && camera.position.distanceTo(ball.position) < 6.5) {
+                isDoingBicycle = true;
+                bicycleTimer = 0.8;
+
+                const dir = new THREE.Vector3();
+                camera.getWorldDirection(dir);
+                dir.y = 0;
+                dir.negate().normalize();
+
+                playSound('kick');
+                if (!isHost) hostConnection.send({ type: 'soundCmd', sound: 'kick' });
+
+                if (isHost) {
+                    endHandballHost();
+                    curveTimer = 0;
+                    ballCurveForce.set(0, 0, 0);
+                    trailMat.color.setHex(getTeamColor(myInfo.team));
+                    broadcast({ type: 'vfxCmd', typeVfx: 'normal', team: myInfo.team });
+
+                    ballVelocity.set(0, 6.2, 0);
+
+                    setTimeout(() => {
+                        ballVelocity.set(dir.x, 0, dir.z).normalize().multiplyScalar(15.5 * getMyPower('kick'));
+                        shakeIntensity = 8;
+                        broadcast({ type: 'shakeCmd', val: 8 });
+                        spawnExplosion(ball.position, myInfo.team, 30);
+                        playSound('hit');
+                    }, 400);
+                } else {
+                    hostConnection.send({ type: 'bicicleta', dirX: dir.x, dirZ: dir.z, power: getMyPower('kick') });
+                }
+            }
+
+            if (isDoingBicycle) {
+                bicycleTimer -= dt;
+                pitch -= (Math.PI * 2) * (dt / 0.8);
+                if (bicycleTimer <= 0) {
+                    isDoingBicycle = false;
+                    pitch = 0;
+                }
+            }
+
+            if (keys.c && !isSliding && stamina >= 20 && slideCooldown <= 0 && !isDoingBicycle) {
                 isSliding = true;
-                slideTimer = 0.35; 
-                slideCooldown = 3.0; // 3 Segundos sem poder usar de novo
+                slideCooldown = 2.0;
                 stamina -= 20;
-                
-                if (isHost) slidingPlayers[myInfo.id] = 0.35;
-                else if (hostConnection && hostConnection.open) hostConnection.send({ type: 'startSlide' });
+                if (isHost) slidingPlayersHost[myInfo.id] = 0.35;
+                else hostConnection.send({ type: 'startSlide' });
             }
 
             if (isSliding) {
-                slideTimer -= dt;
-                if (slideTimer <= 0) isSliding = false;
+                slideCooldown -= dt;
+                if (slideCooldown < 1.6) isSliding = false;
+                else spawnExplosion({ x: camera.position.x, y: 0.2, z: camera.position.z }, myInfo.team, 2, 2);
             }
 
-            // Pulo
-            if (keys.space && !isJumping && !isSliding && stamina >= 10) {
+            if (keys.g && !isSliding && !isDoingBicycle) {
+                keys.g = false;
+                if (isHost) {
+                    let hitSomeone = false;
+                    playSound('hit');
+
+                    for (let id in networkMeshes) {
+                        if (networkMeshes[id].mesh.position.distanceTo(camera.position) < 4) {
+                            const d = new THREE.Vector3().subVectors(networkMeshes[id].mesh.position, camera.position).normalize();
+                            connections[id].send({ type: 'stunCmd', time: 1.8, stunType: 'punch', dirX: d.x, dirZ: d.z });
+                            hitSomeone = true;
+                        }
+                    }
+
+                    if (hitSomeone && refLooking) giveCard(myInfo.id, 'red', 'SOCO');
+                } else {
+                    hostConnection.send({ type: 'punchReq' });
+                }
+            }
+
+            if (keys.space && !isJumping && !isSliding && stamina >= 10 && !isDoingBicycle) {
                 isJumping = true;
-                playerVy = 6.5; 
+                playerVy = 8 * pJump;
                 stamina -= 10;
             }
 
-            if (isJumping) {
-                playerVy -= 16 * dt; 
+            if (isJumping || isDoingBicycle) {
+                playerVy -= 30 * dt;
                 camera.position.y += playerVy * dt;
                 if (camera.position.y <= 2.0) {
                     camera.position.y = 2.0;
@@ -1892,248 +1894,371 @@
                 }
             } else if (!isSliding) {
                 camera.position.y = 2.0;
+            } else {
+                camera.position.y = 0.8;
             }
 
-            const dir = new THREE.Vector3();
-            camera.getWorldDirection(dir);
-            dir.y = 0;
-            if (dir.lengthSq() > 0) dir.normalize();
+            if (!isDoingBicycle) {
+                const dir = new THREE.Vector3();
+                camera.getWorldDirection(dir);
+                dir.y = 0;
+                dir.normalize();
 
-            const right = new THREE.Vector3().crossVectors(dir, camera.up).normalize();
-
-            if (document.pointerLockElement === document.body) {
-                let moveZ = 0;
-                let moveX = 0;
-
-                if (keys.w) moveZ += 1;
-                if (keys.s) moveZ -= 1;
-                if (keys.a) moveX -= 1;
-                if (keys.d) moveX += 1;
-
-                let speed = 8.2;
-                const moving = moveX !== 0 || moveZ !== 0;
+                const right = new THREE.Vector3().crossVectors(dir, camera.up).normalize();
+                let moveZ = keys.w ? 1 : (keys.s ? -1 : 0);
+                let moveX = keys.a ? -1 : (keys.d ? 1 : 0);
+                let speed = 15 * pSpeed;
 
                 if (isSliding) {
-                    speed = 26; 
-                    moveZ = 1; 
+                    speed = 30;
+                    moveZ = 1;
                     moveX = 0;
-                    camera.position.y = 0.8; 
-                } else if (keys.shift && moving && stamina > 0) {
-                    speed = 15.5;
+                } else if (keys.shift && (moveX || moveZ) && stamina > 0) {
+                    speed = 25 * pSpeed;
                     stamina -= 30 * dt;
+                    if (Math.random() < 0.2) spawnExplosion({ x: camera.position.x, y: 0.2, z: camera.position.z }, myInfo.team, 1, 3);
                 } else {
-                    stamina += 22 * dt;
+                    stamina += pStmRegen * dt;
                 }
 
-                stamina = clamp(stamina, 0, 100);
-                document.getElementById('staminaBar').style.width = stamina + '%';
+                stamina = clamp(stamina, 0, pStmMax);
+                document.getElementById('staminaBar').style.width = (stamina / pStmMax * 100) + '%';
 
                 const moveVec = new THREE.Vector3();
                 if (moveZ) moveVec.addScaledVector(dir, moveZ);
                 if (moveX) moveVec.addScaledVector(right, moveX);
 
-                if (moveVec.lengthSq() > 0) {
-                    moveVec.normalize();
-                    camera.position.addScaledVector(moveVec, speed * dt);
-                }
+                if (moveVec.lengthSq() > 0) camera.position.addScaledVector(moveVec.normalize(), speed * dt);
             }
 
             camera.position.x = clamp(camera.position.x, -fieldWidth / 2 + 1, fieldWidth / 2 - 1);
             camera.position.z = clamp(camera.position.z, -fieldLength / 2 + 1, fieldLength / 2 - 1);
+
+            camera.rotation.set(0, 0, 0);
+            camera.rotateY(yaw);
+            camera.rotateX(pitch);
         }
 
-        function updateRemotePlayers(dt) {
-            const lerpFactor = 1 - Math.pow(0.001, dt);
-
-            for (const id in networkMeshes) {
-                const remote = networkMeshes[id];
-                remote.mesh.position.lerp(remote.targetPos, lerpFactor);
-                remote.mesh.rotation.y += (remote.targetRotY - remote.mesh.rotation.y) * lerpFactor;
-                
-                if (remote.isStunned) {
-                    remote.mesh.rotation.z = Math.PI / 2;
-                    remote.mesh.position.y = 0.5;
-                } else {
-                    remote.mesh.rotation.z = 0;
-                }
+        function applyTouchImpulse(pPos, isSlidingHit) {
+            if (handball.active || isStunned) return;
+            if (pPos.distanceTo(ball.position) < 2.8) {
+                const toBall = new THREE.Vector3().subVectors(ball.position, pPos);
+                toBall.y = 0;
+                toBall.normalize();
+                ballVelocity.addScaledVector(toBall, isSlidingHit ? 7.2 : 1.4);
             }
         }
 
-        function updateHostPhysicsAndBall(dt) {
-            // FÍSICA DO CARRINHO (HOST)
-            for (let id in slidingPlayers) {
-                slidingPlayers[id] -= dt;
-                if (slidingPlayers[id] <= 0) {
-                    delete slidingPlayers[id];
+        function updateHostPhysics(dt) {
+            refTimer -= dt;
+            if (refTimer <= 0) {
+                refLooking = !refLooking;
+                refTimer = refLooking ? 4.0 : 6.0;
+            }
+
+            if (gameMode === 'caos') {
+                caosTimer += dt;
+                if (caosTimer > 30 && !caosActive) {
+                    caosTimer = 0;
+                    triggerCaosEvent();
+                }
+            }
+
+            if (hasGk) {
+                gkBlue.position.x += gkVxBlue * dt;
+                if (gkBlue.position.x > 6 || gkBlue.position.x < -6) gkVxBlue *= -1;
+
+                gkGreen.position.x += gkVxGreen * dt;
+                if (gkGreen.position.x > 6 || gkGreen.position.x < -6) gkVxGreen *= -1;
+
+                if (ball.position.distanceTo(gkBlue.position) < 2.5) {
+                    ballVelocity.z *= -1;
+                    ballVelocity.x += (Math.random() - 0.5) * 10;
+                }
+                if (ball.position.distanceTo(gkGreen.position) < 2.5) {
+                    ballVelocity.z *= -1;
+                    ballVelocity.x += (Math.random() - 0.5) * 10;
+                }
+            }
+
+            for (let id in slidingPlayersHost) {
+                slidingPlayersHost[id] -= dt;
+                if (slidingPlayersHost[id] <= 0) {
+                    delete slidingPlayersHost[id];
                     continue;
                 }
 
-                const pPos = getPlayerPositionById(id);
-                const pTeam = getPlayerTeamById(id);
+                const pPos = id === myInfo.id
+                    ? camera.position
+                    : (networkMeshes[id] ? networkMeshes[id].mesh.position : null);
+                if (!pPos) continue;
 
-                if (pPos.distanceTo(ball.position) < 3.5) {
-                    const toBall = new THREE.Vector3().subVectors(ball.position, pPos).normalize();
-                    toBall.y = 0.2; 
-                    ballVelocity.add(toBall.multiplyScalar(20 * dt)); 
-                    updateLastTouch(id);
-                }
+                let hitSomeone = false;
 
-                for (let other of roomPlayers) {
-                    if (other.id !== id && !stunnedPlayers[other.id]) {
-                        const oPos = getPlayerPositionById(other.id);
-                        if (oPos && pPos.distanceTo(oPos) < 2.5 && other.team !== pTeam) {
-                            stunnedPlayers[other.id] = 1.8; 
-                            if (other.id === myInfo.id) {
-                                isStunned = true;
-                                stunTimer = 1.8;
-                                showGlobalEvent('VOCÊ FOI DERRUBADO!', 2000);
-                            } else {
-                                const conn = connections[other.id];
-                                if (conn && conn.open) conn.send({ type: 'stunCmd', targetId: other.id });
-                                showGlobalEvent(`${other.name} tomou um carrinho de ${getPlayerNameById(id)}!`, 2000);
-                            }
-                        }
+                for (let otherId in networkMeshes) {
+                    if (otherId !== id && networkMeshes[otherId].mesh.position.distanceTo(pPos) < 2.5) {
+                        const d = new THREE.Vector3().subVectors(networkMeshes[otherId].mesh.position, pPos).normalize();
+                        connections[otherId].send({ type: 'stunCmd', time: 1.8, stunType: 'slide', dirX: d.x, dirZ: d.z });
+                        hitSomeone = true;
+                        playSound('hit');
                     }
                 }
+
+                if (id !== myInfo.id && camera.position.distanceTo(pPos) < 2.5) {
+                    const d = new THREE.Vector3().subVectors(camera.position, pPos).normalize();
+                    isStunned = true;
+                    stunTimer = 1.8;
+                    document.getElementById('stunMessage').innerText = "DERRUBADO!";
+                    hitSomeone = true;
+                    myStunType = 'slide';
+                    knockbackVel.set(d.x * 10, 15, d.z * 10);
+                    playSound('hit');
+                }
+
+                if (hitSomeone && refLooking) {
+                    giveCard(id, 'red', 'CARRINHO');
+                    delete slidingPlayersHost[id];
+                }
             }
 
-            for (let id in stunnedPlayers) {
-                stunnedPlayers[id] -= dt;
-                if (stunnedPlayers[id] <= 0) delete stunnedPlayers[id];
-            }
+            applyTouchImpulse(camera.position, isSliding);
+            for (let id in networkMeshes) applyTouchImpulse(networkMeshes[id].mesh.position, slidingPlayersHost[id] > 0);
 
-            if (juggle.active) {
-                const p = getPlayerPositionById(juggle.playerId);
-                if (p) {
-                    juggle.bounceTime += dt * (5.5 + juggle.count * 0.12);
+            if (handball.active) {
+                const pPos = handball.playerId === myInfo.id
+                    ? camera.position
+                    : (networkMeshes[handball.playerId] ? networkMeshes[handball.playerId].mesh.position : null);
 
-                    const baseWave = Math.sin(juggle.bounceTime * 4.5);
-                    const secondWave = Math.sin(juggle.bounceTime * 9.0) * 0.15;
-                    const smoothBounce = Math.abs(baseWave + secondWave) * juggle.bounceAmplitude;
-                    const desiredY = ballRadius + juggle.baseHeight + smoothBounce;
-
-                    ball.position.x += (p.x - ball.position.x) * Math.min(1, 12 * dt);
-                    ball.position.z += (p.z - ball.position.z) * Math.min(1, 12 * dt);
-                    ball.position.y += (desiredY - ball.position.y) * Math.min(1, 15 * dt);
-
+                if (pPos) {
+                    ball.position.x = pPos.x;
+                    ball.position.z = pPos.z;
+                    ball.position.y = 3.0;
                     ballVelocity.set(0, 0, 0);
+
+                    if (refLooking) {
+                        giveCard(handball.playerId, 'yellow', 'MÃO NA BOLA');
+                        endHandballHost();
+                    }
                 } else {
-                    endJuggle('fail');
+                    endHandballHost();
                 }
-                return;
-            }
 
-            // Encostões do Player na bola
-            applyTouchImpulse(camera.position, myInfo.id);
-            for (const id in networkMeshes) {
-                applyTouchImpulse(networkMeshes[id].mesh.position, id);
-            }
+                handball.timeout -= dt;
+                if (handball.timeout <= 0) endHandballHost();
+            } else {
+                if (curveTimer > 0) {
+                    curveTimer -= dt;
+                    ballVelocity.addScaledVector(ballCurveForce, dt);
+                }
 
-            // FÍSICA E GRAVIDADE DA BOLA
-            ballVelocity.y -= 16 * dt; 
-            ball.position.addScaledVector(ballVelocity, dt * 10);
+                ballVelocity.y -= 16 * dt;
+                ball.position.addScaledVector(ballVelocity, dt * 10);
 
-            if (ball.position.y < ballRadius) {
-                ball.position.y = ballRadius;
-                ballVelocity.y *= -0.42;
-                ballVelocity.x *= 0.972;
-                ballVelocity.z *= 0.972;
-            }
+                if (ball.position.y < ballRadius) {
+                    ball.position.y = ballRadius;
+                    ballVelocity.y *= -0.5;
+                    ballVelocity.x *= 0.96;
+                    ballVelocity.z *= 0.96;
+                }
 
-            if (ball.position.x > fieldWidth / 2 - ballRadius) {
-                ball.position.x = fieldWidth / 2 - ballRadius;
-                ballVelocity.x *= -0.82;
-            }
+                if (Math.abs(ball.position.x) > fieldWidth / 2 - ballRadius) {
+                    ball.position.x = Math.sign(ball.position.x) * (fieldWidth / 2 - ballRadius);
+                    ballVelocity.x *= -0.8;
+                }
 
-            if (ball.position.x < -fieldWidth / 2 + ballRadius) {
-                ball.position.x = -fieldWidth / 2 + ballRadius;
-                ballVelocity.x *= -0.82;
-            }
+                if (Math.abs(ball.position.z) > fieldLength / 2 - ballRadius) {
+                    if (Math.abs(ball.position.x) < 7 && ball.position.y < 4) {
+                        const t = ball.position.z > 0 ? 'blue' : 'green';
+                        if (t === 'blue') placar1++;
+                        else placar2++;
 
-            // SISTEMA DE GOLS
-            if (ball.position.z > fieldLength / 2 - ballRadius || ball.position.z < -fieldLength / 2 + ballRadius) {
-                if (Math.abs(ball.position.x) < 7) { 
-                    
-                    // Lado Verde (Z positivo) - Azul tenta fazer gol aqui
-                    if (ball.position.z > fieldLength / 2) {
-                        if (lastTouchTeam === 'green') {
-                            placar1++; 
-                            showGlobalEvent(`GOL CONTRA DE ${lastTouchName.toUpperCase()}!`);
-                        } else {
-                            placar1++; 
-                            showGlobalEvent(`GOL DA EQUIPE AZUL! (${lastTouchName || '?'})`);
-                        }
+                        broadcastEvent(`GOL DO ${teamNames[t].toUpperCase()}!`, t === 'blue' ? '#3b82f6' : '#10b981');
                         document.getElementById('score1').innerText = placar1;
-                        resetBallCenter();
-                    } 
-                    
-                    // Lado Azul (Z negativo) - Verde tenta fazer gol aqui
-                    else if (ball.position.z < -fieldLength / 2) {
-                        if (lastTouchTeam === 'blue') {
-                            placar2++; 
-                            showGlobalEvent(`GOL CONTRA DE ${lastTouchName.toUpperCase()}!`);
-                        } else {
-                            placar2++; 
-                            showGlobalEvent(`GOL DA EQUIPE VERDE! (${lastTouchName || '?'})`);
-                        }
                         document.getElementById('score2').innerText = placar2;
-                        resetBallCenter();
-                    }
-                } else {
-                    // Bateu na parede do fundo fora do gol
-                    if (ball.position.z > fieldLength / 2 - ballRadius) {
-                        ball.position.z = fieldLength / 2 - ballRadius;
-                        ballVelocity.z *= -0.82;
-                    }
-                    if (ball.position.z < -fieldLength / 2 + ballRadius) {
-                        ball.position.z = -fieldLength / 2 + ballRadius;
-                        ballVelocity.z *= -0.82;
+
+                        const goalPos = { x: ball.position.x, y: 2, z: ball.position.z };
+                        triggerGoalVFX(goalPos, t);
+                        broadcast({ type: 'vfxCmd', typeVfx: 'goal', pos: goalPos, team: t });
+
+                        ball.position.set(0, 5, 0);
+                        ballVelocity.set(0, 0, 0);
+                        curveTimer = 0;
+                        ballCurveForce.set(0, 0, 0);
+                    } else {
+                        ball.position.z = Math.sign(ball.position.z) * (fieldLength / 2 - ballRadius);
+                        ballVelocity.z *= -0.8;
                     }
                 }
             }
         }
 
-        function updateJuggleHost(dt) {
-            if (!juggle.active) return;
+        function startHandballHost(playerId) {
+            if (handball.active) return;
+            handball.active = true;
+            handball.playerId = playerId;
+            handball.count = 0;
+            handball.meter = 0.5;
+            handball.meterDir = 1;
+            handball.zoneStart = 0.36;
+            handball.zoneSize = 0.28;
+            handball.speed = 1.0;
+            handball.timeout = 1.25;
+            ballVelocity.set(0, 0, 0);
+            curveTimer = 0;
+            broadcast({ type: 'hbState', hb: handball });
+            syncHbClient(handball);
+        }
 
-            juggle.meter += juggle.meterDir * juggle.speed * dt;
+        function endHandballHost() {
+            if (!handball.active) return;
+            handball.active = false;
+            broadcast({ type: 'hbState', hb: handball });
+            syncHbClient(handball);
+        }
 
-            if (juggle.meter >= 1) {
-                juggle.meter = 1;
-                juggle.meterDir = -1;
-            } else if (juggle.meter <= 0) {
-                juggle.meter = 0;
-                juggle.meterDir = 1;
-            }
+        function hostProcessHbInput(playerId) {
+            if (!handball.active || handball.playerId !== playerId) return;
+            const zoneEnd = handball.zoneStart + handball.zoneSize;
 
-            juggle.timeout -= dt;
-            if (juggle.timeout <= 0) {
-                endJuggle('fail');
-                return;
-            }
+            if (handball.meter >= handball.zoneStart && handball.meter <= zoneEnd) {
+                handball.count++;
+                handball.timeout = 1.25;
+                handball.speed = clamp(handball.speed + 0.1, 1.0, 2.2);
+                handball.zoneSize = clamp(handball.zoneSize - 0.015, 0.12, 0.28);
 
-            const currentTime = performance.now();
-            if (currentTime - lastBroadcastAt > 66) {
-                broadcastJuggleState();
-                lastBroadcastAt = currentTime;
+                const center = clamp(handball.meter + (Math.random() * 0.28 - 0.14), 0.10, 0.90);
+                handball.zoneStart = clamp(center - handball.zoneSize / 2, 0.02, 0.98 - handball.zoneSize);
+
+                broadcast({ type: 'hbState', hb: handball });
+                syncHbClient(handball);
+            } else {
+                endHandballHost();
             }
         }
 
-        function updateBallSpin(dt) {
-            if (juggle.active) {
-                ball.rotation.x += dt * 7.2;
-                ball.rotation.z += dt * 2.8;
-                ball.rotation.y += dt * 1.6;
-                return;
+        function syncHbClient(data) {
+            handball.active = data.active;
+            handball.playerId = data.playerId;
+            handball.count = data.count;
+            handball.meter = data.meter;
+            handball.zoneStart = data.zoneStart;
+            handball.zoneSize = data.zoneSize;
+            handball.speed = data.speed ?? handball.speed;
+            handball.meterDir = data.meterDir ?? handball.meterDir;
+
+            if (handball.active) {
+                hbUI.style.display = 'block';
+                document.getElementById('hbTxt').innerHTML = handball.playerId === myInfo.id
+                    ? `Aperte <b>F</b> no verde!`
+                    : `Alguém pegou a bola!`;
+                hbZone.style.left = `${handball.zoneStart * 100}%`;
+                hbZone.style.width = `${handball.zoneSize * 100}%`;
+                hbMarker.style.left = `calc(${handball.meter * 100}% - 4px)`;
+            } else {
+                hbUI.style.display = 'none';
+            }
+        }
+
+        function updateVisuals(dt) {
+            if (isHost) {
+                if (refLooking) {
+                    eyeMat.color.setHex(0xff0000);
+                    refStatus.style.display = 'block';
+                } else {
+                    eyeMat.color.setHex(0x110000);
+                    refStatus.style.display = 'none';
+                }
+                judgeGroup.rotation.y += 0.02;
             }
 
-            const vx = ballVelocity.x;
-            const vz = ballVelocity.z;
+            if (!isHost) {
+                ball.position.addScaledVector(ballVelocity, dt * 10);
+                ball.position.lerp(targetBallPos, 0.3);
+            }
 
-            if (Math.abs(vx) > 0.01 || Math.abs(vz) > 0.01) {
-                ball.rotation.x += vz * dt * 3.6;
-                ball.rotation.z -= vx * dt * 3.6;
-                ball.rotation.y += (Math.abs(vx) + Math.abs(vz)) * dt * 0.65;
+            if (caosActive) {
+                blackoutBlinkTimer += dt * 10;
+                const pulse = (Math.sin(blackoutBlinkTimer) + 1) * 0.5;
+                ball.material.emissive.setRGB(pulse * 0.8, pulse * 0.8, pulse * 0.8);
+                ballLight.intensity = 1.2 + pulse * 2.2;
+            }
+
+            if (handball.active) {
+                handball.meter += handball.meterDir * handball.speed * dt;
+                if (handball.meter >= 1) {
+                    handball.meter = 1;
+                    handball.meterDir = -1;
+                } else if (handball.meter <= 0) {
+                    handball.meter = 0;
+                    handball.meterDir = 1;
+                }
+                hbMarker.style.left = `calc(${handball.meter * 100}% - 4px)`;
+            } else if (ballVelocity.lengthSq() > 2) {
+                ball.rotation.x += ballVelocity.z * dt * 0.5;
+                ball.rotation.z -= ballVelocity.x * dt * 0.5;
+
+                for (let i = maxTrail - 1; i > 0; i--) {
+                    trailPositions[i * 3] = trailPositions[(i - 1) * 3];
+                    trailPositions[i * 3 + 1] = trailPositions[(i - 1) * 3 + 1];
+                    trailPositions[i * 3 + 2] = trailPositions[(i - 1) * 3 + 2];
+                }
+
+                trailPositions[0] = ball.position.x;
+                trailPositions[1] = ball.position.y;
+                trailPositions[2] = ball.position.z;
+                trailGeo.attributes.position.needsUpdate = true;
+            }
+
+            for (let i = 0; i < particleCount; i++) {
+                const p = particleData[i];
+                if (p.active) {
+                    if (p.type === 1) {
+                        p.life -= dt * 0.3;
+                        p.vel.x += (Math.random() - 0.5) * 15 * dt;
+                        p.vel.z += (Math.random() - 0.5) * 15 * dt;
+                        p.vel.y -= 2 * dt;
+                    } else {
+                        p.life -= dt * 1.5;
+                        p.vel.y -= 12 * dt;
+                    }
+
+                    p.pos.addScaledVector(p.vel, dt);
+                    dummy.position.copy(p.pos);
+                    dummy.scale.setScalar(Math.max(0, p.life));
+                    dummy.updateMatrix();
+                    particlesInstanced.setMatrixAt(i, dummy.matrix);
+
+                    if (p.life <= 0) p.active = false;
+                }
+            }
+            particlesInstanced.instanceMatrix.needsUpdate = true;
+
+            if (shakeIntensity > 0) {
+                camera.position.x += (Math.random() - 0.5) * shakeIntensity * 0.1;
+                camera.position.y += (Math.random() - 0.5) * shakeIntensity * 0.1;
+                shakeIntensity -= dt * 15;
+                if (shakeIntensity < 0) shakeIntensity = 0;
+            }
+
+            for (const id in networkMeshes) {
+                const m = networkMeshes[id];
+                m.mesh.position.lerp(m.targetPos, 0.4);
+                m.mesh.rotation.y += (m.targetRotY - m.mesh.rotation.y) * 0.4;
+
+                if (m.isStunned) {
+                    if (m.stunType === 'slide') {
+                        m.mesh.rotation.x += 15 * dt;
+                        m.mesh.rotation.y += 15 * dt;
+                    } else {
+                        m.mesh.rotation.z = Math.PI / 2;
+                        m.mesh.rotation.x = 0;
+                    }
+                } else if (m.isBicycle) {
+                    m.mesh.rotation.x += 15 * dt;
+                } else {
+                    m.mesh.rotation.z = 0;
+                    m.mesh.rotation.x = 0;
+                }
             }
         }
 
