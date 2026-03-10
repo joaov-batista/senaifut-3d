@@ -688,6 +688,11 @@
     let hasGk = true;
     let gameMode = 'tradicional';
 
+    let yellowCards = {};
+    let refState = { mode: 'idle', targetId: null, timer: 0 };
+    let targetRefPos;
+    let targetRefRotY = 0;
+
     let chaosState = {
       active: false,
       type: null,
@@ -1210,36 +1215,50 @@
       }
     }
 
+    function triggerRefChase(targetId, duration = 15) {
+      refState.mode = 'chasing';
+      refState.targetId = targetId;
+      refState.timer = duration;
+      broadcastEvent(`O JUIZ ESTÁ FURIOSO COM ${getPlayerName(targetId).toUpperCase()}!`, '#ff0000');
+    }
+
     function applyCardLocal(cardType, reason) {
       playSound('whistle');
-      isStunned = true;
-      myStunType = 'punch';
-      knockbackVel.set(0, 0, 0);
-
-      if (cardType === 'red') {
-        redCardTimer = 10;
-        stunTimer = 10;
-        document.getElementById('stunMessage').innerText = "CARTÃO VERMELHO!";
-        document.getElementById('stunOverlay').style.background = 'rgba(220, 38, 38, 0.4)';
-        camera.position.set(38, 2, (Math.random() - 0.5) * 20);
-        spawnExplosion(camera.position, myInfo.team, 50);
-      } else {
+      if (cardType === 'yellow') {
+        isStunned = true;
+        myStunType = 'punch';
+        knockbackVel.set(0, 0, 0);
         redCardTimer = 5;
         stunTimer = 5;
         document.getElementById('stunMessage').innerText = "CARTÃO AMARELO!";
         document.getElementById('stunOverlay').style.background = 'rgba(234, 179, 8, 0.4)';
         spawnExplosion(camera.position, myInfo.team, 50);
+        shakeIntensity = 10;
       }
-      shakeIntensity = 10;
     }
 
     function giveCard(playerId, cardType, reason) {
       playSound('whistle');
-      if (playerId === myInfo.id) applyCardLocal(cardType, reason);
-      else if (connections[playerId]) connections[playerId].send({ type: 'cardCmd', cardType, reason });
 
-      const color = cardType === 'red' ? '#ff0000' : '#facc15';
-      broadcastEvent(`FALTA! ${getPlayerName(playerId)} TOMOU CARTÃO POR ${reason}!`, color);
+      if (cardType === 'yellow') {
+          if (!yellowCards[playerId]) yellowCards[playerId] = 0;
+          yellowCards[playerId]++;
+
+          if (yellowCards[playerId] >= 3) {
+              yellowCards[playerId] = 0;
+              cardType = 'red';
+              reason = '3 AMARELOS';
+          }
+      }
+
+      if (cardType === 'red') {
+          triggerRefChase(playerId, 15);
+          broadcastEvent(`CARTÃO VERMELHO! O JUIZ VAI PEGAR ${getPlayerName(playerId)} POR ${reason}!`, '#ff0000');
+      } else {
+          if (playerId === myInfo.id) applyCardLocal('yellow', reason);
+          else if (connections[playerId]) connections[playerId].send({ type: 'cardCmd', cardType: 'yellow', reason });
+          broadcastEvent(`CARTÃO AMARELO PARA ${getPlayerName(playerId)} POR ${reason}!`, '#facc15');
+      }
     }
 
     function resetChaosVisuals() {
@@ -1307,6 +1326,13 @@
         chaosState.timer = chaosState.duration = 9;
         broadcastEvent('🚀 CHUTE TURBO!', '#67e8f9');
         showChaosUI('CHUTE TURBO', 'Todos os chutes saem mais fortes.', 9, false);
+      } else if (kind === 'referee_chase') {
+        chaosState.timer = chaosState.duration = 15;
+        let allIds = [myInfo.id, ...Object.keys(networkMeshes)];
+        let randomTarget = allIds[Math.floor(Math.random() * allIds.length)];
+        triggerRefChase(randomTarget, 15);
+        broadcastEvent('🏃 CAOS: FÚRIA DO JUIZ!', '#ff0000');
+        showChaosUI('FÚRIA DO JUIZ', 'O juiz desceu pro campo e quer sangue!', 15, false);
       }
 
       applyChaosVisuals();
@@ -1339,7 +1365,7 @@
 
     function triggerRandomChaosEvent() {
       if (!isHost || gameMode !== 'caos' || chaosState.active) return;
-      const kinds = ['blackout', 'balloon', 'mash', 'goldgoal', 'turbo'];
+      const kinds = ['blackout', 'balloon', 'mash', 'goldgoal', 'turbo', 'referee_chase'];
       const kind = kinds[Math.floor(Math.random() * kinds.length)];
       startChaosEventHost(kind);
     }
@@ -1354,6 +1380,7 @@
         else if (chaosState.type === 'mash') showChaosUI('GUERRA DE ESPAÇO', 'Aperte ESPAÇO. O time com mais toques ganha 1 gol.', chaosState.timer, true);
         else if (chaosState.type === 'goldgoal') showChaosUI('BOLA DOURADA', 'O próximo gol vale 2.', chaosState.timer, false);
         else if (chaosState.type === 'turbo') showChaosUI('CHUTE TURBO', 'Todos os chutes saem mais fortes.', chaosState.timer, false);
+        else if (chaosState.type === 'referee_chase') showChaosUI('FÚRIA DO JUIZ', 'O juiz desceu pro campo e quer sangue!', chaosState.timer, false);
         updateChaosBar();
       } else hideChaosUI();
     }
@@ -1604,9 +1631,10 @@
               hitSomeone = true;
               knockbackVel.set(dir.x * 25, 5, dir.z * 25);
               document.getElementById('stunMessage').innerText = "DERRUBADO!";
+              document.getElementById('stunOverlay').style.background = 'rgba(220, 38, 38, 0.4)';
             }
 
-            if (hitSomeone && refLooking) giveCard(senderId, 'red', 'SOCO');
+            if (hitSomeone) giveCard(senderId, 'yellow', 'SOCO');
             break;
           }
 
@@ -1642,7 +1670,8 @@
             isStunned = true;
             stunTimer = data.time || 1.8;
             myStunType = data.stunType || 'punch';
-            document.getElementById('stunMessage').innerText = data.time >= 10 ? "DESMAIADO!" : "DERRUBADO!";
+            document.getElementById('stunMessage').innerText = data.msg ? data.msg : (data.time >= 10 ? "DESMAIADO!" : "DERRUBADO!");
+            document.getElementById('stunOverlay').style.background = data.msg ? 'rgba(220, 38, 38, 0.6)' : 'rgba(220, 38, 38, 0.4)';
             {
               const f = myStunType === 'punch' ? 25 : 10;
               const up = myStunType === 'punch' ? 5 : 15;
@@ -1707,12 +1736,10 @@
       document.getElementById('score2').innerText = placar2;
 
       refLooking = data.refLooking;
-      if (refLooking) {
-        eyeMat.color.setHex(0xff0000);
-        refStatus.style.display = 'block';
-      } else {
-        eyeMat.color.setHex(0x110000);
-        refStatus.style.display = 'none';
+      
+      if (data.ref) {
+          targetRefPos = new THREE.Vector3(data.ref.x, data.ref.y, data.ref.z);
+          targetRefRotY = data.ref.rotY;
       }
 
       if (hasGk) {
@@ -1816,6 +1843,7 @@
         score1: placar1,
         score2: placar2,
         refLooking,
+        ref: { x: judgeGroup.position.x, y: judgeGroup.position.y, z: judgeGroup.position.z, rotY: judgeGroup.rotation.y },
         positions: posData
       });
     }
@@ -2146,6 +2174,7 @@
           pitch = 0;
           knockbackVel.set(0, 0, 0);
           document.getElementById('stunMessage').innerText = "DERRUBADO!";
+          document.getElementById('stunOverlay').style.background = 'rgba(220, 38, 38, 0.4)';
         }
         return;
       }
@@ -2231,7 +2260,7 @@
               hitSomeone = true;
             }
           }
-          if (hitSomeone && refLooking) giveCard(myInfo.id, 'red', 'SOCO');
+          if (hitSomeone) giveCard(myInfo.id, 'yellow', 'SOCO');
         } else {
           hostConnection.send({ type: 'punchReq' });
         }
@@ -2337,6 +2366,68 @@
       if (refTimer <= 0) {
         refLooking = !refLooking;
         refTimer = refLooking ? 4.0 : 6.0;
+      }
+
+      if (refState.mode === 'chasing' && refState.targetId) {
+          refState.timer -= dt;
+
+          let targetPos = refState.targetId === myInfo.id ? camera.position : (networkMeshes[refState.targetId] ? networkMeshes[refState.targetId].mesh.position : new THREE.Vector3());
+
+          let dir = new THREE.Vector3().subVectors(targetPos, judgeGroup.position);
+          dir.y = 0;
+          if (dir.lengthSq() > 0) dir.normalize();
+
+          judgeGroup.position.addScaledVector(dir, 14 * dt);
+          judgeGroup.position.y -= 10 * dt;
+          if (judgeGroup.position.y < 2) judgeGroup.position.y = 2;
+
+          judgeGroup.lookAt(targetPos.x, judgeGroup.position.y, targetPos.z);
+
+          if (judgeGroup.position.distanceTo(targetPos) < 3.5 && judgeGroup.position.y < 4) {
+              playSound('hit');
+              let pDir = dir.clone();
+              if (refState.targetId === myInfo.id) {
+                  isStunned = true;
+                  stunTimer = 5;
+                  myStunType = 'punch';
+                  knockbackVel.set(pDir.x * 35, 15, pDir.z * 35);
+                  document.getElementById('stunMessage').innerText = "O JUIZ TE PEGOU!";
+                  document.getElementById('stunOverlay').style.background = 'rgba(220, 38, 38, 0.6)';
+              } else if (connections[refState.targetId]) {
+                  connections[refState.targetId].send({ type: 'stunCmd', time: 5, stunType: 'punch', dirX: pDir.x, dirZ: pDir.z, msg: "O JUIZ TE PEGOU!" });
+              }
+              broadcast({ type: 'shakeCmd', val: 15 });
+              shakeIntensity = 15;
+              spawnExplosion(targetPos, getPlayerTeam(refState.targetId), 50, 20);
+              broadcastEvent(`O JUIZ AMASSOU ${getPlayerName(refState.targetId)}!`, '#ff0000');
+
+              refState.mode = 'idle';
+
+              if (chaosState.active && chaosState.type === 'referee_chase') endChaosEventHost();
+          } else {
+              let allIds = [myInfo.id, ...Object.keys(networkMeshes)];
+              for (let id of allIds) {
+                  if (id !== refState.targetId) {
+                      let pPos = id === myInfo.id ? camera.position : networkMeshes[id].mesh.position;
+                      if (judgeGroup.position.distanceTo(pPos) < 3.0 && judgeGroup.position.y < 4) {
+                          refState.targetId = id;
+                          refState.timer = 10;
+                          broadcastEvent(`O JUIZ MUDOU DE ALVO! FOGE ${getPlayerName(id)}!`, '#ff0000');
+                          break;
+                      }
+                  }
+              }
+          }
+
+          if (refState.timer <= 0) {
+              refState.mode = 'idle';
+              if (chaosState.active && chaosState.type === 'referee_chase') endChaosEventHost();
+          }
+      } else {
+          judgeGroup.position.y += 5 * dt;
+          if (judgeGroup.position.y > 18) judgeGroup.position.y = 18;
+          judgeGroup.position.x += (0 - judgeGroup.position.x) * dt;
+          judgeGroup.position.z += (0 - judgeGroup.position.z) * dt;
       }
 
       if (gameMode === 'caos') {
@@ -2447,14 +2538,15 @@
           isStunned = true;
           stunTimer = 1.8;
           document.getElementById('stunMessage').innerText = "DERRUBADO!";
+          document.getElementById('stunOverlay').style.background = 'rgba(220, 38, 38, 0.4)';
           hitSomeone = true;
           myStunType = 'slide';
           knockbackVel.set(d.x * 10, 15, d.z * 10);
           playSound('hit');
         }
 
-        if (hitSomeone && refLooking) {
-          giveCard(id, 'red', 'CARRINHO');
+        if (hitSomeone) {
+          giveCard(id, 'yellow', 'CARRINHO');
           delete slidingPlayersHost[id];
         }
       }
@@ -2471,10 +2563,9 @@
           ball.position.y = 3.0;
           ballVelocity.set(0, 0, 0);
 
-          if (refLooking) {
-            giveCard(handball.playerId, 'yellow', 'MÃO NA BOLA');
-            endHandballHost();
-          }
+          giveCard(handball.playerId, 'yellow', 'MÃO NA BOLA');
+          endHandballHost();
+          
         } else endHandballHost();
 
         handball.timeout -= dt;
@@ -2583,12 +2674,24 @@
           eyeMat.color.setHex(0x110000);
           refStatus.style.display = 'none';
         }
-        judgeGroup.rotation.y += 0.02;
+        if (refState.mode === 'idle') judgeGroup.rotation.y += 0.02;
       }
 
       if (!isHost) {
         ball.position.addScaledVector(ballVelocity, dt * 10);
         ball.position.lerp(targetBallPos, 0.3);
+
+        if (targetRefPos) {
+           judgeGroup.position.lerp(targetRefPos, 0.4);
+           judgeGroup.rotation.y += (targetRefRotY - judgeGroup.rotation.y) * 0.4;
+           if (refLooking) {
+              eyeMat.color.setHex(0xff0000);
+              refStatus.style.display = 'block';
+           } else {
+              eyeMat.color.setHex(0x110000);
+              refStatus.style.display = 'none';
+           }
+        }
       }
 
       if (chaosState.blackout) {
