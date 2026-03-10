@@ -1634,7 +1634,7 @@
               document.getElementById('stunOverlay').style.background = 'rgba(220, 38, 38, 0.4)';
             }
 
-            if (hitSomeone) giveCard(senderId, 'yellow', 'SOCO');
+            if (hitSomeone && refLooking) giveCard(senderId, 'yellow', 'SOCO');
             break;
           }
 
@@ -2260,7 +2260,7 @@
               hitSomeone = true;
             }
           }
-          if (hitSomeone) giveCard(myInfo.id, 'yellow', 'SOCO');
+          if (hitSomeone && refLooking) giveCard(myInfo.id, 'yellow', 'SOCO');
         } else {
           hostConnection.send({ type: 'punchReq' });
         }
@@ -2546,7 +2546,7 @@
         }
 
         if (hitSomeone) {
-          giveCard(id, 'yellow', 'CARRINHO');
+          if (refLooking) giveCard(id, 'yellow', 'CARRINHO');
           delete slidingPlayersHost[id];
         }
       }
@@ -2563,8 +2563,10 @@
           ball.position.y = 3.0;
           ballVelocity.set(0, 0, 0);
 
-          giveCard(handball.playerId, 'yellow', 'MÃO NA BOLA');
-          endHandballHost();
+          if (refLooking) {
+            giveCard(handball.playerId, 'yellow', 'MÃO NA BOLA');
+            endHandballHost();
+          }
           
         } else endHandballHost();
 
