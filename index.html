@@ -1854,7 +1854,7 @@
 
             if (isSliding) {
                 slideCooldown -= dt;
-                if (slideCooldown < 1.6) isSliding = false;
+                if (slideCooldown < 2.6) isSliding = false;
                 else spawnExplosion({ x: camera.position.x, y: 0.2, z: camera.position.z }, myInfo.team, 2, 2);
             }
 
@@ -1910,7 +1910,7 @@
                 let speed = 15 * pSpeed;
 
                 if (isSliding) {
-                    speed = 30;
+                    speed = 50;
                     moveZ = 1;
                     moveX = 0;
                 } else if (keys.shift && (moveX || moveZ) && stamina > 0) {
